@@ -97,6 +97,8 @@ Phase 1.1 established the foundational infrastructure for the EDGAR Answer Engin
 - **Vector column**: Unsupported type declaration for pgvector compatibility
 - **Audit fields**: Created/updated timestamps for all entities
 - **Cascading deletes**: Maintain referential integrity
+- **Cross-document queries**: Schema supports both company-specific and thematic search patterns
+- **Bulk operations**: Designed for efficient cross-document discovery and aggregation
 
 ---
 
@@ -115,6 +117,7 @@ Phase 1.1 established the foundational infrastructure for the EDGAR Answer Engin
 - **TLS encryption**: Security requirement for production data
 - **ioredis**: Production-grade Redis client with clustering support
 - **Lazy connections**: Efficient resource usage in serverless environment
+- **Multi-pattern caching**: Supports both company-specific and cross-document caching strategies
 
 **Configuration details**:
 - Connection string: `redis://default:token@host:6379`
@@ -175,11 +178,12 @@ Phase 1.1 established the foundational infrastructure for the EDGAR Answer Engin
 | Component | Choice | Why |
 |-----------|--------|-----|
 | **Frontend** | Next.js 14 | App Router, serverless functions, excellent Vercel integration |
-| **Database** | PostgreSQL + pgvector | ACID compliance, vector search, mature ecosystem |
-| **Cache/Queue** | Redis (Upstash) | High performance, global distribution, serverless-friendly |
+| **Database** | PostgreSQL + pgvector | ACID compliance, vector search, mature ecosystem, dual query pattern support |
+| **Cache/Queue** | Redis (Upstash) | High performance, global distribution, serverless-friendly, multi-pattern caching |
 | **Storage** | Vercel Blob | Native platform integration, global CDN, cost-effective |
 | **ORM** | Prisma | Type safety, migrations, excellent PostgreSQL support |
 | **Deployment** | Vercel | Serverless, global edge network, zero-config deployments |
+| **SEC Data Layer** | EDGAR MCP (Phase 2.1) | Proven SEC compliance, community maintenance, robust API handling |
 | **Monitoring** | Custom health checks | Real-time service monitoring, simple and effective |
 
 ### **Infrastructure Patterns**
@@ -338,12 +342,15 @@ NODE_ENV="production"
 ## 🎉 Phase 1.1 Complete - Ready for Phase 1.2
 
 ### **What's Next: Phase 1.2 - Core Data Layer**
-With our rock-solid foundation in place, we're ready to build the core data layer:
+With our rock-solid foundation in place, we're ready to build the core data layer with dual query pattern support:
 
 1. **SEC Utilities** - CIK padding, URL composition, accession parsing
 2. **Rate Limiter** - Token bucket implementation with Redis backend  
-3. **Company Resolver** - Ticker → CIK lookup system
-4. **Retry/Backoff** - Robust error handling for SEC API interactions
+3. **Company Resolver** - Ticker → CIK lookup system with fallbacks
+4. **Query Classification** - Detect company-specific vs. thematic patterns
+5. **Retry/Backoff** - Robust error handling for SEC API interactions
+
+**Key Architecture Enhancement**: The foundation is designed to handle both company-specific queries ("What was Apple's revenue?") and cross-document thematic queries ("All 10-Ks mentioning revenue recognition").
 
 ### **Foundation Benefits for Future Phases**
 - ✅ **No infrastructure rebuilds** - Focus purely on feature development
@@ -351,6 +358,8 @@ With our rock-solid foundation in place, we're ready to build the core data laye
 - ✅ **Reliable deployments** - Automated CI/CD pipeline ready
 - ✅ **Comprehensive monitoring** - Health checks for all services
 - ✅ **Scalable architecture** - Ready for high-throughput SEC data processing
+- ✅ **Dual query support** - Database and caching designed for both company-specific and thematic queries
+- ✅ **EDGAR MCP ready** - Infrastructure compatible with MCP integration in Phase 2.1
 
 ---
 

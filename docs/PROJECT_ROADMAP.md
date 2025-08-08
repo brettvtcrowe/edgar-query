@@ -10,6 +10,7 @@ Build a cloud-hosted web application that answers natural language queries about
 - **Tool-first orchestration** - LLM plans and composes; tools provide facts
 - **Progressive results** - Stream partial results for broad scans
 - **Compliance & respect** - Proper User-Agent, rate limiting, backoff
+- **Dual query patterns** - Support both company-specific AND cross-document thematic queries
 
 ## Development Phases
 
@@ -120,52 +121,73 @@ Build a cloud-hosted web application that answers natural language queries about
 ### MCP Tool Layer Phase
 *Isolated, testable, reusable*
 
-#### Phase 2.1: MCP Server Setup
-**Duration**: 2 days
-
-**Tasks**:
-1. Bootstrap MCP server
-   - Configure MCP SDK
-   - Setup tool registry
-   - Implement error handling
-
-2. Build validation layer
-   - Zod schemas for all tools
-   - Input validation
-   - Output formatting
-
-3. Implement core tools:
-   - `resolve_company`
-   - `list_filings`
-
-**Validation Gate**:
-- [ ] MCP server starts and exposes tools
-- [ ] Tools callable via test harness
-- [ ] Validation rejects invalid inputs
-
-#### Phase 2.2: Filing Fetch & Parse Tools
+#### Phase 2.1: MCP Server Setup & EDGAR MCP Integration
 **Duration**: 3 days
 
 **Tasks**:
-1. Build `fetch_filing` tool
-   - Compose archive URLs
-   - Handle HTML/TXT formats
-   - Store in Blob with TTL
+1. Integrate EDGAR MCP as primary SEC data layer
+   - Install and configure EDGAR MCP package
+   - Test MCP tool connectivity and rate limiting
+   - Validate compliance with SEC guidelines
 
-2. Create HTML parser
-   - Remove boilerplate
-   - Extract clean text
-   - Preserve structure
+2. Bootstrap custom MCP server for business logic
+   - Configure MCP SDK for custom tools
+   - Setup tool registry with EDGAR MCP + custom tools
+   - Implement error handling and fallback mechanisms
 
-3. Build `extract_sections` tool
-   - Generic heading detection
-   - Section boundaries
-   - Text extraction
+3. Build validation layer
+   - Zod schemas for all tools (EDGAR MCP + custom)
+   - Input validation and output formatting
+   - Tool orchestration patterns
+
+4. Implement dual-pattern query routing:
+   - `classify_query` - Determine company-specific vs. thematic
+   - `resolve_company` - Company-specific queries (fallback to custom)
+   - `discover_filings` - Cross-document discovery by criteria
+   - `list_filings` - Company-specific filing lists
 
 **Validation Gate**:
-- [ ] Can fetch any filing by accession
-- [ ] HTML cleaned properly
-- [ ] Basic sections extracted
+- [ ] EDGAR MCP tools working with proper rate limiting
+- [ ] Custom MCP server starts and exposes tools
+- [ ] Query classification correctly identifies patterns
+- [ ] Company-specific queries route to resolve_company
+- [ ] Thematic queries route to discover_filings
+- [ ] Validation rejects invalid inputs
+
+#### Phase 2.2: Filing Fetch & Parse Tools
+**Duration**: 4 days
+
+**Tasks**:
+1. Build `fetch_filing` tool (uses EDGAR MCP as primary)
+   - Leverage EDGAR MCP filing fetch capabilities
+   - Fallback to custom archive URL composition
+   - Handle HTML/TXT formats with proper encoding
+   - Store in Blob with TTL and filing metadata
+
+2. Create robust HTML parser
+   - Remove SEC boilerplate and navigation
+   - Extract clean text while preserving structure
+   - Handle XBRL inline markup
+   - Normalize whitespace and formatting
+
+3. Build `extract_sections` tool
+   - Generic heading detection with confidence scoring
+   - Section boundary identification
+   - Text extraction with offset tracking
+   - Metadata preservation (filing type, date, etc.)
+
+4. Add `bulk_discover` tool for thematic queries
+   - Search across filing indexes by form type
+   - Date range filtering (e.g., "past year")
+   - Filing type prioritization (10-K over 8-K for fundamental analysis)
+   - Progressive result streaming for large result sets
+
+**Validation Gate**:
+- [ ] Can fetch any filing by accession (EDGAR MCP + fallback)
+- [ ] HTML cleaned properly with structure preserved
+- [ ] Basic sections extracted with accurate boundaries
+- [ ] Bulk discovery returns relevant filings for thematic queries
+- [ ] Progressive streaming works for large result sets
 
 ### Sectionizer Phase
 *Get this right early - it's core to everything*
@@ -204,20 +226,24 @@ Build a cloud-hosted web application that answers natural language queries about
    - Score calculation
    - Result ranking
 
-2. Build `search_text` tool
-   - Search within sections
-   - Return spans with offsets
-   - Score-based ranking
+2. Build `search_text` tool for dual patterns
+   - Company-specific: Search within known company sections
+   - Thematic: Search across all cached sections by criteria
+   - Return spans with precise offsets and source metadata
+   - Score-based ranking with relevance and recency
 
-3. Add section priorities
-   - Query-based weighting
-   - Form-specific boosts
-   - Configurable rules
+3. Add section priorities and discovery rules
+   - Query-based weighting for different section types
+   - Form-specific boosts (10-K MD&A > 8-K for fundamental analysis)
+   - Thematic query rules (revenue recognition → accounting sections)
+   - Configurable discovery patterns
 
 **Validation Gate**:
-- [ ] Can find "goodwill impairment" mentions
-- [ ] Section priorities affect ranking
-- [ ] Offsets correctly map to source
+- [ ] Company-specific: Can find "goodwill impairment" in AAPL 10-K
+- [ ] Thematic: Can find "revenue recognition" across multiple 10-Ks
+- [ ] Section priorities affect ranking appropriately
+- [ ] Offsets correctly map to source documents
+- [ ] Discovery patterns work for common thematic queries
 
 ### RAG Pipeline Phase
 *Now we can answer questions*
@@ -362,6 +388,61 @@ Build a cloud-hosted web application that answers natural language queries about
    - Progress tracking
    - Result caching
 
+## Query Architecture Patterns
+
+### Dual Query Pattern Support
+
+**Company-Specific Queries**:
+```
+"What was Apple's revenue in Q3 2024?" 
+"How does Microsoft describe AI risks in their latest 10-K?"
+"Show me Tesla's cash flow from their most recent filing"
+```
+
+**Flow**: Query → Classify → Company Resolution → Filing Discovery → Section Search → Answer
+
+**Thematic/Cross-Document Queries**:
+```
+"Show me all 10-Ks in the past year that include language around 'revenue recognition'"
+"Which companies mentioned supply chain disruptions in their latest quarterly filings?"
+"Find all companies that disclosed cybersecurity incidents in 8-K filings this year"
+```
+
+**Flow**: Query → Classify → Bulk Discovery → Cross-Document Search → Aggregated Answer
+
+### Query Classification Logic
+
+**Company-Specific Indicators**:
+- Company names, tickers, or CIK numbers mentioned
+- Possessive language ("Apple's revenue", "their latest filing")
+- Specific company context cues
+
+**Thematic Indicators**:
+- Plural references ("companies that", "all 10-Ks")
+- Comparative language ("which companies", "show me all")
+- Time-bound document searches ("past year", "this quarter")
+- Topic-focused without company specification
+
+### Tool Orchestration Patterns
+
+**Pattern 1: Company-Specific**
+```
+classify_query → resolve_company → list_filings → fetch_filing → 
+extract_sections → search_text → compose_answer
+```
+
+**Pattern 2: Thematic Discovery**
+```  
+classify_query → discover_filings → bulk_fetch → extract_sections →
+cross_search → aggregate_results → compose_answer
+```
+
+**Pattern 3: Hybrid (Company + Thematic)**
+```
+classify_query → resolve_company + discover_filings → merge_results →
+unified_search → compose_answer
+```
+
 ## Critical Path Dependencies
 
 ```mermaid
@@ -384,16 +465,24 @@ graph TD
 
 ### Technical Risks
 1. **SEC Rate Limiting**
-   - Mitigation: Build robust retry logic early
-   - Fallback: Queue and batch requests
+   - Mitigation: EDGAR MCP handles compliance; build robust retry logic
+   - Fallback: Queue and batch requests with intelligent prioritization
 
 2. **Parsing Complexity**
-   - Mitigation: Start with common forms
-   - Fallback: Generic section extraction
+   - Mitigation: Start with common forms (10-K, 10-Q, 8-K)
+   - Fallback: Generic section extraction with confidence scoring
 
-3. **Search Quality**
-   - Mitigation: Implement hybrid approach
-   - Fallback: Multiple ranking strategies
+3. **Search Quality for Thematic Queries**
+   - Mitigation: Implement hybrid BM25 + vector search early
+   - Fallback: Multiple ranking strategies and progressive refinement
+
+4. **Query Classification Accuracy**
+   - Mitigation: Test with diverse query patterns and edge cases
+   - Fallback: Allow manual query pattern override
+
+5. **Cross-Document Performance**
+   - Mitigation: Progressive streaming and result caching
+   - Fallback: Result pagination and background processing
 
 ### Timeline Risks
 1. **Scope Creep**
@@ -414,8 +503,10 @@ graph TD
 - API & UI: End-to-end working
 
 ### Overall Metrics
-- Query accuracy: >90% correct citations
-- Response time: <5s for simple queries
+- Query accuracy: >90% correct citations for both patterns
+- Response time: <5s for company-specific, <15s for thematic queries
+- Query classification: >95% accuracy on pattern detection
+- Cross-document recall: >85% relevant filings found for thematic queries
 - Uptime: 99.9% availability
 - Rate limiting: Zero 429 errors in production
 
