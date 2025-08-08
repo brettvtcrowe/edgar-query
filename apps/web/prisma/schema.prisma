@@ -1,0 +1,89 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [vector]
+}
+
+model Company {
+  id       String @id @default(cuid())
+  cik      String @unique
+  ticker   String?
+  name     String
+  filings  Filing[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("companies")
+}
+
+model Filing {
+  id               String   @id @default(cuid())
+  accessionNumber  String   @unique
+  filingDate       DateTime
+  reportDate       DateTime
+  formType         String
+  companyName      String
+  
+  company   Company @relation(fields: [cik], references: [cik])
+  cik       String
+  sections  Section[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("filings")
+}
+
+model Section {
+  id          String @id @default(cuid())
+  title       String
+  content     String
+  sectionType String
+  order       Int
+  
+  filing   Filing @relation(fields: [filingId], references: [id], onDelete: Cascade)
+  filingId String
+  chunks   Chunk[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("sections")
+}
+
+model Chunk {
+  id        String                     @id @default(cuid())
+  content   String
+  embedding Unsupported("vector(1536)")?
+  startPos  Int
+  endPos    Int
+  
+  section   Section @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  sectionId String
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("chunks")
+}
+
+model Answer {
+  id       String @id @default(cuid())
+  question String
+  answer   String
+  sources  Json
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("answers")
+}
