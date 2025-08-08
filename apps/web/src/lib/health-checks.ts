@@ -2,10 +2,19 @@ import { db } from './db';
 
 export async function checkDatabaseHealth(): Promise<boolean> {
   try {
-    await db.$queryRaw`SELECT 1`;
+    console.log('DATABASE_URL configured:', !!process.env.DATABASE_URL);
+    console.log('DATABASE_URL prefix:', process.env.DATABASE_URL?.substring(0, 20));
+    
+    const result = await db.$queryRaw`SELECT 1 as health_check`;
+    console.log('Database health check result:', result);
     return true;
   } catch (error) {
     console.error('Database health check failed:', error);
+    console.error('Error details:', {
+      message: error.message,
+      code: error.code,
+      name: error.name
+    });
     return false;
   }
 }
