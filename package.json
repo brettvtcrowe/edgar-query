@@ -1,0 +1,23 @@
+{
+  "name": "edgar-query",
+  "version": "1.0.0",
+  "private": true,
+  "description": "EDGAR Answer Engine - Natural language queries for SEC filings",
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck"
+  },
+  "workspaces": [
+    "apps/*",
+    "services/*",
+    "packages/*"
+  ],
+  "devDependencies": {
+    "turbo": "^1.10.7",
+    "@types/node": "^20.5.0",
+    "typescript": "^5.1.6"
+  }
+}
