@@ -183,7 +183,7 @@ Phase 1.1 established the foundational infrastructure for the EDGAR Answer Engin
 | **Storage** | Vercel Blob | Native platform integration, global CDN, cost-effective |
 | **ORM** | Prisma | Type safety, migrations, excellent PostgreSQL support |
 | **Deployment** | Vercel | Serverless, global edge network, zero-config deployments |
-| **SEC Data Layer** | EDGAR MCP (Phase 2.1) | Proven SEC compliance, community maintenance, robust API handling |
+| **SEC Data Layer** | EDGAR MCP + Custom Layer | Proven SEC compliance + advanced thematic search capabilities |
 | **Monitoring** | Custom health checks | Real-time service monitoring, simple and effective |
 
 ### **Infrastructure Patterns**

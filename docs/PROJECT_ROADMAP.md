@@ -119,75 +119,186 @@ Build a cloud-hosted web application that answers natural language queries about
 - [ ] Retry logic handles rate limits gracefully
 
 ### MCP Tool Layer Phase
-*Isolated, testable, reusable*
+*Hybrid approach: Proven SEC access + Custom advanced search*
 
-#### Phase 2.1: MCP Server Setup & EDGAR MCP Integration
-**Duration**: 3 days
+## EDGAR MCP Integration Strategy
 
-**Tasks**:
-1. Integrate EDGAR MCP as primary SEC data layer
-   - Install and configure EDGAR MCP package
-   - Test MCP tool connectivity and rate limiting
-   - Validate compliance with SEC guidelines
+### Why Hybrid Architecture?
 
-2. Bootstrap custom MCP server for business logic
-   - Configure MCP SDK for custom tools
-   - Setup tool registry with EDGAR MCP + custom tools
-   - Implement error handling and fallback mechanisms
+**EDGAR MCP Strengths** (Use for):
+- ✅ SEC compliance and rate limiting (built-in)
+- ✅ Company resolution (ticker → CIK conversion)
+- ✅ Individual filing retrieval and section extraction  
+- ✅ XBRL financial data access (structured data)
+- ✅ Insider trading analysis
+- ✅ Recent filings discovery per company
+- ✅ Community maintenance and SEC API updates
 
-3. Build validation layer
-   - Zod schemas for all tools (EDGAR MCP + custom)
-   - Input validation and output formatting
-   - Tool orchestration patterns
+**EDGAR MCP Limitations** (Build custom for):
+- ❌ Cross-document thematic queries ("all 10-Ks mentioning X")
+- ❌ Bulk content search across multiple companies
+- ❌ Advanced semantic similarity and vector search
+- ❌ Time-range analysis across entire filing universe  
+- ❌ Industry/sector comparative analysis
+- ❌ Custom content indexing and aggregation
 
-4. Implement dual-pattern query routing:
-   - `classify_query` - Determine company-specific vs. thematic
-   - `resolve_company` - Company-specific queries (fallback to custom)
-   - `discover_filings` - Cross-document discovery by criteria
-   - `list_filings` - Company-specific filing lists
+### Tool Distribution Strategy
 
-**Validation Gate**:
-- [ ] EDGAR MCP tools working with proper rate limiting
-- [ ] Custom MCP server starts and exposes tools
-- [ ] Query classification correctly identifies patterns
-- [ ] Company-specific queries route to resolve_company
-- [ ] Thematic queries route to discover_filings
-- [ ] Validation rejects invalid inputs
+**Company-Specific Queries → EDGAR MCP**
+```
+"What was Apple's Q3 revenue?" 
+→ convert_ticker_to_cik("AAPL") 
+→ get_recent_filings_smart(cik="0000320193", form="10-Q")
+→ get_filing_txt_sections(sections=["item_2"])
+```
 
-#### Phase 2.2: Filing Fetch & Parse Tools
+**Thematic Queries → Custom Layer**
+```
+"All 10-Ks mentioning revenue recognition"
+→ bulkFilingDiscovery(formType="10-K", dateRange="1year") 
+→ crossDocumentSearch(query="revenue recognition", sections=["accounting"])
+→ aggregateResults(groupBy="theme")
+```
+
+**Hybrid Queries → Both Systems**
+```
+"How do tech companies describe AI risks compared to Apple?"
+→ EDGAR MCP: Apple's latest 10-K risk factors
+→ Custom: Industry search for AI risk disclosures  
+→ Comparative analysis and synthesis
+```
+
+#### Phase 2.1: EDGAR MCP Integration & Custom Business Logic Layer
 **Duration**: 4 days
 
+**EDGAR MCP Resources**:
+- **Repository**: https://github.com/stefanoamorelli/sec-edgar-mcp
+- **Documentation**: https://sec-edgar-mcp.amorelli.tech/
+- **Tools Reference**: https://sec-edgar-mcp.amorelli.tech/tools
+- **22 total MCP tools** covering companies, filings, financials, insider trading
+
+**Hybrid Architecture Approach**:
+Use EDGAR MCP for SEC data access + build custom layer for advanced search capabilities
+
 **Tasks**:
-1. Build `fetch_filing` tool (uses EDGAR MCP as primary)
-   - Leverage EDGAR MCP filing fetch capabilities
-   - Fallback to custom archive URL composition
-   - Handle HTML/TXT formats with proper encoding
-   - Store in Blob with TTL and filing metadata
+1. **EDGAR MCP Integration** (Day 1-2)
+   - Install SEC EDGAR MCP: `npm install sec-edgar-mcp` 
+   - Configure SEC user agent registration (required)
+   - Test core EDGAR MCP tools:
+     - `get_recent_filings_smart` - Company filing retrieval
+     - `get_filing_txt_sections` - Section extraction  
+     - `convert_ticker_to_cik` - Company resolution
+     - `get_company_information` - Company metadata
+   - Validate rate limiting and SEC compliance
+   - Test XBRL financial data access capabilities
 
-2. Create robust HTML parser
-   - Remove SEC boilerplate and navigation
-   - Extract clean text while preserving structure
-   - Handle XBRL inline markup
-   - Normalize whitespace and formatting
+2. **Custom Business Logic Layer** (Day 2-3)
+   - Build query classification system (NOT as MCP server)
+   - Implement dual-pattern detection:
+     - Company-specific: Uses EDGAR MCP directly
+     - Thematic: Uses custom cross-document search
+   - Create orchestration functions:
+     - `classifyQuery()` - Determine query pattern
+     - `orchestrateCompanyQuery()` - Route to EDGAR MCP
+     - `orchestrateThematicQuery()` - Route to custom search
+     - `combineResults()` - Merge and format responses
 
-3. Build `extract_sections` tool
-   - Generic heading detection with confidence scoring
-   - Section boundary identification
-   - Text extraction with offset tracking
-   - Metadata preservation (filing type, date, etc.)
+3. **Custom Tools for EDGAR MCP Gaps** (Day 3-4)
+   - `bulkFilingDiscovery()` - Cross-document discovery by criteria
+     - Date range filtering ("past year", "Q3 2024")
+     - Form type filtering (10-K, 10-Q, 8-K)
+     - Industry/sector filtering
+     - Progressive result streaming
+   - `crossDocumentSearch()` - Thematic content search
+     - Search across cached filing sections
+     - Semantic similarity matching
+     - Relevance scoring and ranking
+   - `filingContentIndex()` - Build searchable content index
+     - Extract and index all section content
+     - Create metadata mappings
+     - Support bulk content operations
 
-4. Add `bulk_discover` tool for thematic queries
-   - Search across filing indexes by form type
-   - Date range filtering (e.g., "past year")
-   - Filing type prioritization (10-K over 8-K for fundamental analysis)
-   - Progressive result streaming for large result sets
+4. **Error Handling & Fallback System**
+   - EDGAR MCP failure fallbacks to custom SEC API calls
+   - Rate limiting coordination between EDGAR MCP and custom tools
+   - Graceful degradation for partial results
+   - Comprehensive error logging and monitoring
 
 **Validation Gate**:
-- [ ] Can fetch any filing by accession (EDGAR MCP + fallback)
-- [ ] HTML cleaned properly with structure preserved
-- [ ] Basic sections extracted with accurate boundaries
-- [ ] Bulk discovery returns relevant filings for thematic queries
-- [ ] Progressive streaming works for large result sets
+- [ ] EDGAR MCP installation successful with all 22 tools accessible
+- [ ] SEC user agent registration completed and compliant
+- [ ] Core EDGAR MCP tools tested: `get_recent_filings_smart`, `get_filing_txt_sections`, `convert_ticker_to_cik`
+- [ ] Query classification system accurately detects company-specific vs. thematic patterns
+- [ ] Company queries successfully routed to EDGAR MCP tools
+- [ ] Thematic queries successfully routed to custom cross-document search
+- [ ] Bulk filing discovery returns relevant results for time/form filters
+- [ ] Cross-document search works across multiple cached filings
+- [ ] Error handling gracefully falls back from EDGAR MCP to custom tools
+- [ ] Rate limiting coordination prevents SEC API violations
+
+#### Phase 2.2: Enhanced Filing Processing & Content Indexing
+**Duration**: 4 days
+
+**Goal**: Extend EDGAR MCP capabilities with robust parsing, content indexing, and bulk processing for thematic queries
+
+**Tasks**:
+1. **EDGAR MCP Filing Enhancement** (Day 1-2)
+   - Wrap EDGAR MCP `get_filing_txt_sections` with caching layer
+   - Implement intelligent section extraction using EDGAR MCP's parsing
+   - Add metadata enrichment to EDGAR MCP responses:
+     - Filing type classification
+     - Section confidence scoring
+     - Content length and complexity metrics
+   - Store processed filings in Blob with structured metadata
+   - Create filing content hash system for deduplication
+
+2. **Advanced HTML/Text Processing** (Day 2-3)
+   - Build on EDGAR MCP's section extraction with custom enhancements:
+     - Remove SEC navigation and boilerplate (beyond EDGAR MCP default)
+     - Handle complex XBRL inline markup and tables
+     - Preserve document structure for citation accuracy
+     - Normalize whitespace while maintaining paragraph boundaries
+   - Create section type classification system:
+     - 10-K/10-Q: Items 1, 1A, 2, 3, 7, 7A, 8, etc.
+     - 8-K: Item mapping (2.02, 5.02, etc.)
+     - Custom section detection for non-standard formats
+   - Implement confidence scoring for section boundaries
+
+3. **Content Indexing for Thematic Queries** (Day 3-4)
+   - Build searchable content index (supplements EDGAR MCP):
+     - Full-text indexing of all section content
+     - Keyword extraction and tagging
+     - Topic modeling for common themes (revenue recognition, cybersecurity, etc.)
+     - Cross-reference company/industry/time metadata
+   - Create bulk discovery system:
+     - Time-range queries ("past year", "Q3 2024")
+     - Form type filtering with smart prioritization
+     - Industry/sector cross-analysis
+     - Content similarity clustering
+   - Implement progressive result streaming for large datasets
+
+4. **Custom Content Search Layer** (Day 4)
+   - Build thematic search engine (fills EDGAR MCP gap):
+     - BM25 full-text search across all indexed content
+     - Semantic similarity using cached embeddings
+     - Query expansion and synonym handling
+     - Result ranking by relevance, recency, and source authority
+   - Cross-document aggregation functions:
+     - Find common themes across multiple filings
+     - Industry trend analysis
+     - Regulatory change impact tracking
+     - Company comparison and benchmarking
+
+**Validation Gate**:
+- [ ] EDGAR MCP `get_filing_txt_sections` successfully wrapped with caching
+- [ ] Enhanced section extraction works on 10-K, 10-Q, and 8-K filings  
+- [ ] Section confidence scoring accurately identifies boundaries
+- [ ] Content indexing captures all section text with proper metadata
+- [ ] Thematic search finds "revenue recognition" across multiple 10-Ks
+- [ ] Bulk discovery returns relevant filings for time/form/industry filters
+- [ ] Cross-document aggregation identifies common themes across companies
+- [ ] Progressive streaming handles large result sets without timeout
+- [ ] Custom search layer fills gaps not covered by EDGAR MCP tools
 
 ### Sectionizer Phase
 *Get this right early - it's core to everything*
@@ -464,25 +575,34 @@ graph TD
 ## Risk Mitigation
 
 ### Technical Risks
-1. **SEC Rate Limiting**
-   - Mitigation: EDGAR MCP handles compliance; build robust retry logic
-   - Fallback: Queue and batch requests with intelligent prioritization
+1. **SEC Rate Limiting & Compliance**
+   - Mitigation: EDGAR MCP handles primary compliance; coordinate rate limits between MCP and custom tools
+   - Fallback: Intelligent request queueing and backoff across both systems
 
-2. **Parsing Complexity**
-   - Mitigation: Start with common forms (10-K, 10-Q, 8-K)
-   - Fallback: Generic section extraction with confidence scoring
+2. **EDGAR MCP Dependency Risk**
+   - Mitigation: Build fallback custom SEC API calls for critical functions
+   - Fallback: Cache EDGAR MCP responses aggressively to reduce dependency
+   - Monitoring: Track EDGAR MCP availability and performance
 
-3. **Search Quality for Thematic Queries**
-   - Mitigation: Implement hybrid BM25 + vector search early
-   - Fallback: Multiple ranking strategies and progressive refinement
+3. **Parsing Complexity Across Systems**
+   - Mitigation: Use EDGAR MCP parsing as primary; enhance with custom post-processing
+   - Fallback: Generic section extraction with confidence scoring for non-standard filings
 
-4. **Query Classification Accuracy**
-   - Mitigation: Test with diverse query patterns and edge cases
-   - Fallback: Allow manual query pattern override
+4. **Search Quality for Thematic Queries**
+   - Mitigation: Custom hybrid BM25 + vector search supplements EDGAR MCP capabilities
+   - Fallback: Multiple ranking strategies and progressive query refinement
 
-5. **Cross-Document Performance**
-   - Mitigation: Progressive streaming and result caching
-   - Fallback: Result pagination and background processing
+5. **Query Classification Accuracy**
+   - Mitigation: Test classification with diverse patterns; use EDGAR MCP confidence scoring
+   - Fallback: Allow manual query pattern override and learning from user feedback
+
+6. **Cross-Document Performance at Scale**
+   - Mitigation: Progressive streaming, intelligent caching, and result pagination
+   - Fallback: Background processing for large thematic queries
+
+7. **Data Consistency Between Systems**
+   - Mitigation: Use EDGAR MCP as source of truth; sync custom index regularly
+   - Fallback: Conflict resolution system with user visibility into data sources
 
 ### Timeline Risks
 1. **Scope Creep**

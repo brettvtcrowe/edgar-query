@@ -13,15 +13,21 @@ datasource db {
 }
 
 model Company {
-  id       String @id @default(cuid())
-  cik      String @unique
-  ticker   String?
-  name     String
-  filings  Filing[]
+  id          String @id @default(cuid())
+  cik         String @unique
+  ticker      String?
+  name        String
+  description String?
+  sic         String?   // Standard Industrial Classification
+  industry    String?
+  filings     Filing[]
   
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([ticker])
+  @@index([name])
+  @@index([industry])
   @@map("companies")
 }
 
@@ -32,6 +38,10 @@ model Filing {
   reportDate       DateTime
   formType         String
   companyName      String
+  fileSize         Int?
+  documentCount    Int?
+  period           String?   // Fiscal period (Q1, Q2, Q3, FY)
+  fiscalYear       Int?
   
   company   Company @relation(fields: [cik], references: [cik])
   cik       String
@@ -40,6 +50,12 @@ model Filing {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([formType])
+  @@index([filingDate])
+  @@index([reportDate])
+  @@index([fiscalYear])
+  @@index([cik, formType])
+  @@index([formType, filingDate])
   @@map("filings")
 }
 
@@ -49,6 +65,9 @@ model Section {
   content     String
   sectionType String
   order       Int
+  itemNumber  String?   // e.g., "1A", "7", "2.02" for structured sections
+  wordCount   Int?
+  contentHash String?   // For deduplication
   
   filing   Filing @relation(fields: [filingId], references: [id], onDelete: Cascade)
   filingId String
@@ -57,6 +76,10 @@ model Section {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([sectionType])
+  @@index([itemNumber])
+  @@index([filingId, sectionType])
+  @@index([contentHash])
   @@map("sections")
 }
 
@@ -66,6 +89,7 @@ model Chunk {
   embedding Unsupported("vector(1536)")?
   startPos  Int
   endPos    Int
+  tokens    Int?      // Token count for the chunk
   
   section   Section @relation(fields: [sectionId], references: [id], onDelete: Cascade)
   sectionId String
@@ -73,17 +97,23 @@ model Chunk {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([sectionId])
   @@map("chunks")
 }
 
 model Answer {
-  id       String @id @default(cuid())
-  question String
-  answer   String
-  sources  Json
+  id           String @id @default(cuid())
+  question     String
+  answer       String
+  sources      Json
+  queryType    String    // "company-specific" | "thematic" | "hybrid"
+  responseTime Int?      // Response time in milliseconds
+  confidence   Float?    // Confidence score 0-1
   
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([queryType])
+  @@index([createdAt])
   @@map("answers")
 }
