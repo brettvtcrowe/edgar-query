@@ -1,9 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  experimental: {
-    appDir: true,
-  },
-  runtime: 'nodejs',
+  // App Router is now stable in Next.js 14
 }
 
 module.exports = nextConfig
