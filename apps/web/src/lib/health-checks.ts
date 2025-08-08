@@ -39,6 +39,18 @@ export async function checkRedisHealth(): Promise<boolean> {
 }
 
 export async function checkBlobHealth(): Promise<boolean> {
-  // TODO: Implement Blob storage health check
-  return false;
+  try {
+    if (!process.env.VERCEL_BLOB_READ_WRITE_TOKEN) {
+      console.log('VERCEL_BLOB_READ_WRITE_TOKEN not configured, skipping blob check');
+      return false;
+    }
+
+    // Simple check - just verify the token is configured
+    // We don't actually create a blob in the health check to avoid unnecessary storage usage
+    console.log('Blob storage token configured:', !!process.env.VERCEL_BLOB_READ_WRITE_TOKEN);
+    return true;
+  } catch (error) {
+    console.error('Blob health check failed:', error);
+    return false;
+  }
 }
