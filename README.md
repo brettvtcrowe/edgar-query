@@ -55,39 +55,44 @@ Browser (Next.js) → /api/chat → Query Router → MCP Tools → SEC APIs
 > **For Agents & Developers**: Use this map to find specific information quickly
 
 ### 🚀 Getting Started
-- **[SETUP_GUIDE.md](./SETUP_GUIDE.md)** - Complete environment setup and installation
+- **[docs/SETUP_GUIDE.md](./docs/SETUP_GUIDE.md)** - Complete environment setup and installation
   - *When to use*: Setting up local development or production deployment
   - *Contains*: Prerequisites, step-by-step setup, environment variables, troubleshooting
 
 ### 🗺️ Project Planning
-- **[PROJECT_ROADMAP.md](./PROJECT_ROADMAP.md)** - Development timeline with phases
+- **[docs/PROJECT_ROADMAP.md](./docs/PROJECT_ROADMAP.md)** - Development timeline with phases
   - *When to use*: Understanding project scope, planning sprints, tracking progress
   - *Contains*: Phase breakdown, validation gates, critical path, team allocation
 
 ### 🏛️ System Design
-- **[ARCHITECTURE_REFERENCE.md](./ARCHITECTURE_REFERENCE.md)** - Complete technical architecture
+- **[docs/ARCHITECTURE_REFERENCE.md](./docs/ARCHITECTURE_REFERENCE.md)** - Complete technical architecture
   - *When to use*: Understanding system components, data flow, API contracts
   - *Contains*: Component diagrams, database schema, API specs, performance targets
 
 ### 👨‍💻 Implementation
-- **[DEVELOPMENT_GUIDE.md](./DEVELOPMENT_GUIDE.md)** - Code examples and implementation details
+- **[docs/DEVELOPMENT_GUIDE.md](./docs/DEVELOPMENT_GUIDE.md)** - Code examples and implementation details
   - *When to use*: Writing code, implementing features, debugging issues
   - *Contains*: Monorepo structure, code examples, testing strategies, development workflow
 
 ### 🎨 User Interface
-- **[UX_DESIGN_SPECIFICATION.md](./UX_DESIGN_SPECIFICATION.md)** - Complete UI/UX design system
+- **[docs/UX_DESIGN_SPECIFICATION.md](./docs/UX_DESIGN_SPECIFICATION.md)** - Complete UI/UX design system
   - *When to use*: Building UI components, styling, responsive design, accessibility
   - *Contains*: Design tokens, component library, interaction patterns, mobile layouts
 
 ### ✅ Quality Assurance
-- **[VALIDATION_CHECKLIST.md](./VALIDATION_CHECKLIST.md)** - Acceptance criteria for each phase
+- **[docs/VALIDATION_CHECKLIST.md](./docs/VALIDATION_CHECKLIST.md)** - Acceptance criteria for each phase
   - *When to use*: Testing features, validating phase completion, production readiness
   - *Contains*: Phase checklists, acceptance tests, performance benchmarks, sign-off criteria
 
 ### 🛠️ Technical Reference
-- **[technical_guide.md](./technical_guide.md)** - Deep technical implementation guide
+- **[docs/technical_guide.md](./docs/technical_guide.md)** - Deep technical implementation guide
   - *When to use*: Understanding SEC API details, sectionizer patterns, RAG pipeline
   - *Contains*: SEC endpoints, form-specific parsing, search algorithms, citation formats
+
+### 👤 Agent Profiles
+- **[docs/agents/](./docs/agents/)** - Specialized agent roles and responsibilities
+  - *When to use*: Understanding agent capabilities and coordination
+  - *Contains*: Agent definitions for architect, backend, frontend, DevOps, QA, security, UX, and PM roles
 
 ---
 
@@ -136,7 +141,7 @@ curl http://localhost:3000/api/health
 ## 🏃‍♂️ Development Workflow
 
 ### Current Phase: Foundation
-See [PROJECT_ROADMAP.md](./PROJECT_ROADMAP.md) for detailed phase breakdown.
+See [docs/PROJECT_ROADMAP.md](./docs/PROJECT_ROADMAP.md) for detailed phase breakdown.
 
 ### Daily Development
 ```bash
@@ -154,7 +159,7 @@ pnpm lint
 ```
 
 ### Phase Completion
-Each phase has specific validation gates in [VALIDATION_CHECKLIST.md](./VALIDATION_CHECKLIST.md). Complete all checklist items before proceeding to the next phase.
+Each phase has specific validation gates in [docs/VALIDATION_CHECKLIST.md](./docs/VALIDATION_CHECKLIST.md). Complete all checklist items before proceeding to the next phase.
 
 ---
 
@@ -253,7 +258,7 @@ pnpm db:migrate
 curl https://edgar.yourdomain.com/api/health
 ```
 
-See [SETUP_GUIDE.md](./SETUP_GUIDE.md) for detailed deployment instructions.
+See [docs/SETUP_GUIDE.md](./docs/SETUP_GUIDE.md) for detailed deployment instructions.
 
 ---
 
@@ -274,9 +279,9 @@ See [SETUP_GUIDE.md](./SETUP_GUIDE.md) for detailed deployment instructions.
 5. Pass all CI checks and reviews
 
 ### Phase-Based Development
-Follow the phase structure in [PROJECT_ROADMAP.md](./PROJECT_ROADMAP.md):
+Follow the phase structure in [docs/PROJECT_ROADMAP.md](./docs/PROJECT_ROADMAP.md):
 - Complete validation gates before proceeding
-- Update [VALIDATION_CHECKLIST.md](./VALIDATION_CHECKLIST.md) progress
+- Update [docs/VALIDATION_CHECKLIST.md](./docs/VALIDATION_CHECKLIST.md) progress
 - Coordinate with other developers on dependencies
 
 ---
@@ -309,8 +314,8 @@ curl http://localhost:3000/api/health
 - Confirm SEC endpoints are accessible
 
 ### Getting Help
-1. Check [SETUP_GUIDE.md](./SETUP_GUIDE.md) troubleshooting section
-2. Review [DEVELOPMENT_GUIDE.md](./DEVELOPMENT_GUIDE.md) debugging guide
+1. Check [docs/SETUP_GUIDE.md](./docs/SETUP_GUIDE.md) troubleshooting section
+2. Review [docs/DEVELOPMENT_GUIDE.md](./docs/DEVELOPMENT_GUIDE.md) debugging guide
 3. Search existing issues
 4. Create new issue with reproduction steps
 
@@ -336,12 +341,12 @@ MIT License - see LICENSE file for details.
 
 **For AI agents working on this project:**
 
-1. **Starting new work?** → Read [PROJECT_ROADMAP.md](./PROJECT_ROADMAP.md) current phase
-2. **Need technical details?** → Check [ARCHITECTURE_REFERENCE.md](./ARCHITECTURE_REFERENCE.md) 
-3. **Writing code?** → Use [DEVELOPMENT_GUIDE.md](./DEVELOPMENT_GUIDE.md) examples
-4. **Building UI?** → Follow [UX_DESIGN_SPECIFICATION.md](./UX_DESIGN_SPECIFICATION.md)
-5. **Testing features?** → Use [VALIDATION_CHECKLIST.md](./VALIDATION_CHECKLIST.md)
-6. **Setting up environment?** → Follow [SETUP_GUIDE.md](./SETUP_GUIDE.md)
+1. **Starting new work?** → Read [docs/PROJECT_ROADMAP.md](./docs/PROJECT_ROADMAP.md) current phase
+2. **Need technical details?** → Check [docs/ARCHITECTURE_REFERENCE.md](./docs/ARCHITECTURE_REFERENCE.md) 
+3. **Writing code?** → Use [docs/DEVELOPMENT_GUIDE.md](./docs/DEVELOPMENT_GUIDE.md) examples
+4. **Building UI?** → Follow [docs/UX_DESIGN_SPECIFICATION.md](./docs/UX_DESIGN_SPECIFICATION.md)
+5. **Testing features?** → Use [docs/VALIDATION_CHECKLIST.md](./docs/VALIDATION_CHECKLIST.md)
+6. **Setting up environment?** → Follow [docs/SETUP_GUIDE.md](./docs/SETUP_GUIDE.md)
 
 **Current Focus**: Complete Phase 1 Foundation tasks as outlined in the roadmap.
 
