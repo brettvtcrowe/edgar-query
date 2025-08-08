@@ -11,9 +11,9 @@ export async function checkDatabaseHealth(): Promise<boolean> {
   } catch (error) {
     console.error('Database health check failed:', error);
     console.error('Error details:', {
-      message: error.message,
-      code: error.code,
-      name: error.name
+      message: error instanceof Error ? error.message : String(error),
+      code: (error as any)?.code,
+      name: error instanceof Error ? error.name : 'Unknown'
     });
     return false;
   }
