@@ -20,8 +20,22 @@ export async function checkDatabaseHealth(): Promise<boolean> {
 }
 
 export async function checkRedisHealth(): Promise<boolean> {
-  // TODO: Implement Redis health check
-  return false;
+  try {
+    const { getRedisClient } = await import('./redis');
+    const redis = getRedisClient();
+    
+    const result = await redis.ping();
+    console.log('Redis health check result:', result);
+    return result === 'PONG';
+  } catch (error) {
+    console.error('Redis health check failed:', error);
+    console.error('Redis error details:', {
+      message: error instanceof Error ? error.message : String(error),
+      code: (error as any)?.code,
+      name: error instanceof Error ? error.name : 'Unknown'
+    });
+    return false;
+  }
 }
 
 export async function checkBlobHealth(): Promise<boolean> {
