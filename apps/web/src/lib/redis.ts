@@ -11,11 +11,7 @@ export function getRedisClient(): Redis {
     redis = new Redis(process.env.REDIS_URL, {
       maxRetriesPerRequest: 3,
       lazyConnect: true,
-      tls: {
-        // Upstash requires TLS
-      },
-      retryDelayOnClusterDown: 100,
-      enableAutoPipelining: false,
+      tls: {},
     });
   }
   
