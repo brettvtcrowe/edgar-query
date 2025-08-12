@@ -72,18 +72,22 @@ let isConnected = false;
 
 /**
  * Health check endpoint
+ * Railway-compatible: Always returns 200 if server is running
  */
 app.get('/health', (req, res) => {
   const response = {
-    status: isConnected ? 'ok' as const : 'error' as const,
+    status: 'ok' as const, // Always OK if server is running
     service: 'edgar-mcp-http-bridge',
     timestamp: new Date().toISOString(),
     mcp_connection: isConnected,
-    version: '1.0.0'
+    mcp_status: isConnected ? 'connected' : 'disconnected_but_service_running',
+    version: '1.0.0',
+    environment: process.env.NODE_ENV || 'development'
   };
   
-  const status = isConnected ? 200 : 503;
-  res.status(status).json(response);
+  // Always return 200 for Railway health check
+  // MCP connection status is informational only
+  res.status(200).json(response);
 });
 
 /**
