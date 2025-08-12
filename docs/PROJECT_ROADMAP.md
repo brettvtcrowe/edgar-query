@@ -168,73 +168,97 @@ Build a cloud-hosted web application that answers natural language queries about
 → Comparative analysis and synthesis
 ```
 
-#### Phase 2.1: EDGAR MCP Integration & Custom Business Logic Layer
-**Duration**: 4 days
+#### Phase 2.1: EDGAR MCP Integration & Custom Business Logic Layer (UPDATED FOR VERCEL)
+**Duration**: 5 days (updated from 4 days)
 
 **EDGAR MCP Resources**:
 - **Repository**: https://github.com/stefanoamorelli/sec-edgar-mcp
 - **Documentation**: https://sec-edgar-mcp.amorelli.tech/
 - **Tools Reference**: https://sec-edgar-mcp.amorelli.tech/tools
-- **22 total MCP tools** covering companies, filings, financials, insider trading
+- **21 sophisticated MCP tools** covering companies, filings, financials, insider trading
 
-**Hybrid Architecture Approach**:
-Use EDGAR MCP for SEC data access + build custom layer for advanced search capabilities
+**Architecture Change**: 
+✅ **EDGAR MCP Integration Verified**: All 21 tools tested and working via public Docker image `sha256:16f40558c81c4e4496e02df704fe1cf5d4e65f8ed48af805bf6eee43f8afb32b`
+
+🚨 **Deployment Reality**: Docker-spawning approach is **incompatible with Vercel serverless**. Architecture must change for production deployment.
+
+**Updated Hybrid Architecture**:
+- **Development**: Direct Docker MCP integration for full functionality
+- **Production**: HTTP-based MCP service + fallback direct SEC API calls
 
 **Tasks**:
-1. **EDGAR MCP Integration** (Day 1-2)
-   - Install SEC EDGAR MCP: `npm install sec-edgar-mcp` 
-   - Configure SEC user agent registration (required)
-   - Test core EDGAR MCP tools:
-     - `get_recent_filings_smart` - Company filing retrieval
-     - `get_filing_txt_sections` - Section extraction  
-     - `convert_ticker_to_cik` - Company resolution
-     - `get_company_information` - Company metadata
-   - Validate rate limiting and SEC compliance
-   - Test XBRL financial data access capabilities
+1. **HTTP MCP Service Deployment** (Day 1-2)
+   - ✅ Create HTTP wrapper around existing MCP Docker integration (COMPLETED)
+   - ✅ Successfully tested all 21 EDGAR MCP tools via HTTP bridge
+   - Deploy to Railway/Render as containerized HTTP service
+   - Configure CORS, authentication, and monitoring
+   - Available endpoints verified:
+     - `GET /health` - Service health check
+     - `GET /tools` - List all 21 available tools
+     - `POST /tools/call` - Call any MCP tool by name
+     - `POST /ticker-to-cik` - Convenience endpoint for ticker lookup
+     - `POST /recent-filings` - Get recent SEC filings
+     - `POST /filing-content` - Get filing content and sections
 
-2. **Custom Business Logic Layer** (Day 2-3)
-   - Build query classification system (NOT as MCP server)
-   - Implement dual-pattern detection:
-     - Company-specific: Uses EDGAR MCP directly
-     - Thematic: Uses custom cross-document search
+2. **Vercel-Compatible Client Implementation** (Day 2-3)  
+   - Replace Docker-spawning client with HTTP-based MCP client
+   - Implement fallback direct SEC API client for reliability
+   - Build unified client interface with automatic failover:
+     - Primary: HTTP calls to external MCP service
+     - Fallback: Direct SEC API calls with rate limiting
+   - Add retry logic, caching, and comprehensive error handling
+   - Test integration with Vercel serverless environment
+
+3. **Hybrid Query Orchestration** (Day 3-4)
+   - Build query classification system for dual-pattern detection:
+     - Company-specific: Route to HTTP MCP service (or fallback)
+     - Thematic: Route to custom cross-document search
    - Create orchestration functions:
-     - `classifyQuery()` - Determine query pattern
-     - `orchestrateCompanyQuery()` - Route to EDGAR MCP
-     - `orchestrateThematicQuery()` - Route to custom search
-     - `combineResults()` - Merge and format responses
+     - `classifyQuery()` - Determine query pattern with confidence scoring
+     - `orchestrateCompanyQuery()` - Route to HTTP MCP service
+     - `orchestrateThematicQuery()` - Route to custom search tools
+     - `combineResults()` - Merge and format responses from both systems
 
-3. **Custom Tools for EDGAR MCP Gaps** (Day 3-4)
+4. **Custom Thematic Search Tools** (Day 4-5)
    - `bulkFilingDiscovery()` - Cross-document discovery by criteria
-     - Date range filtering ("past year", "Q3 2024")
-     - Form type filtering (10-K, 10-Q, 8-K)
-     - Industry/sector filtering
-     - Progressive result streaming
+     - Time-range queries across all companies
+     - Form type and industry filtering
+     - Progressive result streaming for large datasets
    - `crossDocumentSearch()` - Thematic content search
-     - Search across cached filing sections
-     - Semantic similarity matching
-     - Relevance scoring and ranking
+     - Search across cached filing sections using BM25 + vector similarity
+     - Relevance scoring with recency and authority weighting
+     - Content aggregation and trend analysis
    - `filingContentIndex()` - Build searchable content index
-     - Extract and index all section content
-     - Create metadata mappings
-     - Support bulk content operations
+     - Extract and index section content using MCP tools
+     - Create metadata mappings and cross-references
+     - Support bulk operations for comparative analysis
 
-4. **Error Handling & Fallback System**
-   - EDGAR MCP failure fallbacks to custom SEC API calls
-   - Rate limiting coordination between EDGAR MCP and custom tools
-   - Graceful degradation for partial results
-   - Comprehensive error logging and monitoring
+5. **Production Deployment & Monitoring** (Day 5)
+   - Deploy HTTP MCP service on Railway with auto-scaling
+   - Configure Vercel environment variables and secrets
+   - Implement comprehensive monitoring and health checks
+   - Test end-to-end query flows in production environment
+   - Validate SEC compliance and rate limiting across both systems
 
 **Validation Gate**:
-- [ ] EDGAR MCP installation successful with all 22 tools accessible
-- [ ] SEC user agent registration completed and compliant
-- [ ] Core EDGAR MCP tools tested: `get_recent_filings_smart`, `get_filing_txt_sections`, `convert_ticker_to_cik`
-- [ ] Query classification system accurately detects company-specific vs. thematic patterns
-- [ ] Company queries successfully routed to EDGAR MCP tools
-- [ ] Thematic queries successfully routed to custom cross-document search
-- [ ] Bulk filing discovery returns relevant results for time/form filters
-- [ ] Cross-document search works across multiple cached filings
-- [ ] Error handling gracefully falls back from EDGAR MCP to custom tools
-- [ ] Rate limiting coordination prevents SEC API violations
+- [x] **EDGAR MCP Docker integration successful** - All 21 tools tested and verified ✅
+- [x] **SEC user agent registration completed** - Compliant with SEC requirements ✅  
+- [x] **Core EDGAR MCP tools validated**:
+  - [x] `get_cik_by_ticker` - Ticker resolution (AAPL → 0000320193) ✅
+  - [x] `get_recent_filings` - Filing discovery with filtering ✅
+  - [x] `get_filing_content` - Document content extraction ✅
+  - [x] `get_filing_sections` - Section parsing and analysis ✅
+  - [x] `analyze_8k` - Event analysis capabilities ✅
+  - [x] Financial tools (`get_financials`, `get_key_metrics`, etc.) ✅
+  - [x] Insider trading tools (5 sophisticated analysis tools) ✅
+- [ ] HTTP MCP service deployment on external platform (Railway/Render)
+- [ ] Vercel-compatible HTTP client with fallback to direct SEC API
+- [ ] Query classification system for dual-pattern routing
+- [ ] Company queries successfully routed to HTTP MCP service
+- [ ] Thematic queries routed to custom cross-document search tools
+- [ ] End-to-end testing in Vercel production environment
+- [ ] Rate limiting coordination across HTTP MCP and direct API calls
+- [ ] Comprehensive monitoring and health checks operational
 
 #### Phase 2.2: Enhanced Filing Processing & Content Indexing
 **Duration**: 4 days

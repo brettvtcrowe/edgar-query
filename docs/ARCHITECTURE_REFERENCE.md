@@ -2,42 +2,45 @@
 
 ## System Architecture Overview
 
+**Production Architecture (Updated for Vercel Deployment)**
+
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                         Browser                              │
-│                    Next.js App Router                        │
-│                     Vercel AI SDK UI                         │
+│                    Vercel Serverless                        │
+│              Next.js App Router + AI SDK UI                 │
 └─────────────────┬───────────────────────────────────────────┘
                   │
 ┌─────────────────▼───────────────────────────────────────────┐
-│                    /api/chat Endpoint                        │
-│                  Tool-calling Orchestration                  │
-│                         Streaming                            │
+│                 /api/chat Endpoint                          │
+│              (Vercel Function)                              │
+│           Tool-calling Orchestration                        │
 └─────────────────┬───────────────────────────────────────────┘
                   │
 ┌─────────────────▼───────────────────────────────────────────┐
-│                    Query Processing Layer                    │
+│                Query Classification Layer                    │
 │  ┌─────────────────────────────────────────────────────┐   │
-│  │ Query Router     │ Plan Builder    │ Entity Resolver│   │
+│  │ Pattern Detection │ Entity Resolver │ Route Planner  │   │
 │  └─────────────────────────────────────────────────────┘   │
-└─────────────────┬───────────────────────────────────────────┘
-                  │
-┌─────────────────▼───────────────────────────────────────────┐
-│                      MCP Tool Layer                          │
-│  ┌─────────────────────────────────────────────────────┐   │
-│  │ resolve_company │ list_filings │ fetch_filing      │   │
-│  │ extract_sections│ search_text  │ xbrl_facts        │   │
-│  └─────────────────────────────────────────────────────┘   │
-└─────────────────┬───────────────────────────────────────────┘
-                  │
-┌─────────────────▼───────────────────────────────────────────┐
-│                   Retrieval Layer (3 Lanes)                  │
-│  ┌─────────────────────────────────────────────────────┐   │
-│  │ Lane 1: Official Structured APIs                    │   │
-│  │ Lane 2: Index Enumerate + Fetch & Scan              │   │
-│  │ Lane 3: Optional Full-text Discovery                │   │
-│  └─────────────────────────────────────────────────────┘   │
-└─────────────────┬───────────────────────────────────────────┘
+└─────┬───────────────────────────────────────────────────┬───┘
+      │ Company-Specific Queries                         │ Thematic Queries
+      ▼                                                  ▼
+┌─────────────────┐                              ┌─────────────────┐
+│ EDGAR MCP Layer │                              │ Custom Tools    │
+│ (External HTTP) │                              │ (Built-in)      │
+└─────┬───────────┘                              └─────┬───────────┘
+      │                                                │
+      ▼                                                ▼
+┌─────────────────┐   ┌─────────────────┐      ┌─────────────────┐
+│ HTTP MCP Client │   │ Fallback Client │      │ Cross-Document  │
+│ (Primary)       │   │ (Direct SEC)    │      │ Search Engine   │
+└─────┬───────────┘   └─────┬───────────┘      └─────┬───────────┘
+      │                     │                        │
+      ▼                     ▼                        ▼
+┌─────────────────┐   ┌─────────────────┐      ┌─────────────────┐
+│  External MCP   │   │   SEC APIs      │      │  Custom Index   │
+│ HTTP Service    │   │ (Direct Calls)  │      │ + Vector Search │
+│ (Railway/Render)│   │                 │      │                 │
+└─────────────────┘   └─────────────────┘      └─────┬───────────┘
                   │
 ┌─────────────────▼───────────────────────────────────────────┐
 │                    Processing Pipeline                       │
@@ -399,7 +402,7 @@ interface LogEntry {
 }
 ```
 
-### 12. Deployment Architecture
+### 12. Production Deployment Architecture (Updated for EDGAR MCP)
 
 #### Vercel Configuration
 
@@ -412,31 +415,81 @@ interface LogEntry {
       "memory": 1024
     },
     "app/api/filings/[cik]/route.ts": {
-      "runtime": "nodejs20.x",
-      "maxDuration": 10,
+      "runtime": "nodejs20.x", 
+      "maxDuration": 30,
       "memory": 512
     }
   },
   "regions": ["iad1"],
   "env": {
-    "NODE_ENV": "production"
+    "NODE_ENV": "production",
+    "EDGAR_MCP_SERVER_URL": "https://edgar-mcp.railway.app",
+    "EDGAR_MCP_API_KEY": "$EDGAR_MCP_API_KEY"
   }
 }
 ```
 
-#### Infrastructure as Code
+#### Multi-Service Infrastructure
 
 ```typescript
-// Infrastructure components
-const infrastructure = {
-  compute: "Vercel Serverless Functions",
+// Updated infrastructure for hybrid EDGAR MCP architecture
+const productionInfrastructure = {
+  // Vercel (Primary Application)
+  compute: "Vercel Serverless Functions (Node.js 20)",
   database: "Neon PostgreSQL with pgvector",
-  cache: "Upstash Redis (Global)",
+  cache: "Upstash Redis (Global)",  
   storage: "Vercel Blob Storage",
   cdn: "Vercel Edge Network",
-  monitoring: "Vercel Analytics + Custom Metrics",
-  secrets: "Vercel Environment Variables"
+  
+  // External EDGAR MCP Service  
+  mcpService: "Railway/Render Containerized Service",
+  mcpImage: "sha256:16f40558c81c4e4496e02df704fe1cf5d4e65f8ed48af805bf6eee43f8afb32b",
+  mcpEndpoint: "HTTPS REST API with CORS + Authentication",
+  mcpBridge: "✅ HTTP Bridge successfully created & tested (services/edgar-mcp-http-bridge)",
+  
+  // Monitoring & Security
+  monitoring: "Vercel Analytics + External MCP Health Checks",
+  secrets: "Vercel Environment Variables + Railway Secrets",
+  rateLimiting: "Coordinated across Vercel + MCP service"
 };
+```
+
+#### Environment Variables (Updated)
+
+```bash
+# Vercel Environment Variables
+DATABASE_URL="postgresql://user:pass@host.neon.tech/db"
+REDIS_URL="redis://default:token@host.upstash.io:6379"
+BLOB_READ_WRITE_TOKEN="vercel_blob_token"
+
+# EDGAR MCP Integration (NEW)
+EDGAR_MCP_SERVER_URL="https://edgar-mcp-service.railway.app"
+EDGAR_MCP_API_KEY="secure_api_key_for_mcp_service"
+
+# SEC Compliance
+SEC_EDGAR_USER_AGENT="EdgarAnswerEngine/1.0 (contact@example.com)"
+
+# Feature Flags
+ENABLE_MCP_FALLBACK=true
+ENABLE_DIRECT_SEC_API=true
+```
+
+#### Deployment Pipeline
+
+```mermaid
+graph TD
+    A[Code Push] --> B[Vercel Deploy]
+    A --> C[Railway Deploy MCP Service]
+    
+    B --> D[Test Vercel Functions]
+    C --> E[Test MCP HTTP Endpoints]
+    
+    D --> F[Integration Tests]
+    E --> F
+    
+    F --> G[Production Deployment]
+    G --> H[Health Checks]
+    H --> I[Monitor Performance]
 ```
 
 ### 13. Cost Optimization

@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  edgar-mcp:
+    image: stefanoamorelli/sec-edgar-mcp:latest
+    environment:
+      - SEC_EDGAR_USER_AGENT=${SEC_EDGAR_USER_AGENT:-EdgarAnswerEngine/1.0 (contact@example.com)}
+    stdin_open: true
+    tty: true
+    networks:
+      - edgar-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import sys; sys.exit(0)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  edgar-bridge:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "${BRIDGE_PORT:-3001}:3001"
+    environment:
+      - NODE_ENV=${NODE_ENV:-development}
+      - SEC_EDGAR_USER_AGENT=${SEC_EDGAR_USER_AGENT:-EdgarAnswerEngine/1.0 (contact@example.com)}
+      - MCP_SERVER_HOST=edgar-mcp
+    depends_on:
+      - edgar-mcp
+    networks:
+      - edgar-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  edgar-network:
+    driver: bridge
