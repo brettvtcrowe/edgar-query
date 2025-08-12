@@ -1,7 +1,9 @@
-# Phase 2.1: HTTP Bridge Service Completed
+# Phase 2.1: HTTP Bridge Service (60% Complete)
+
+## Status: PARTIALLY COMPLETE - HTTP Bridge Built, Deployment Pending
 
 ## Summary
-Successfully created and tested an HTTP bridge service that wraps the EDGAR MCP Docker integration, making all 21 sophisticated SEC data tools accessible via REST API endpoints compatible with Vercel serverless deployment.
+Successfully created and tested an HTTP bridge service that wraps the EDGAR MCP Docker integration, making all 21 sophisticated SEC data tools accessible via REST API endpoints compatible with Vercel serverless deployment. **The bridge is built and tested locally but NOT YET deployed to production or integrated with the main application.**
 
 ## Key Achievements
 
@@ -75,29 +77,67 @@ export class EDGARMCPClient {
 - `docs/PROJECT_ROADMAP.md` - Marked HTTP bridge tasks as completed
 - `docs/ARCHITECTURE_REFERENCE.md` - Added bridge status to infrastructure config
 
-## Next Steps
+## ⚠️ REMAINING WORK (40% of Phase 2.1)
 
-### Immediate (Day 2-3)
-1. **Deploy to Railway/Render**
-   - Push Docker image with HTTP bridge
-   - Configure environment variables
-   - Set up health monitoring
+### Critical Path to Complete Phase 2.1:
 
-2. **Build Vercel Client**
-   - Create HTTP client for Vercel app
-   - Add retry logic and caching
-   - Implement fallback to direct SEC API
+#### 1. **Deploy HTTP Bridge Service** (Day 1) - NOT STARTED
+**Priority: CRITICAL - Blocks all other work**
+- [ ] Package service with Dockerfile for Railway/Render
+- [ ] Deploy to Railway with proper environment variables:
+  - `SEC_EDGAR_USER_AGENT`
+  - `PORT` configuration
+  - Health check endpoints
+- [ ] Configure CORS for Vercel domain
+- [ ] Add authentication (API key or JWT)
+- [ ] Set up monitoring and alerts
+- [ ] Test production endpoints from external network
 
-### Future (Day 3-5)
-3. **Query Orchestration**
-   - Build query classification system
-   - Route company queries to MCP
-   - Route thematic queries to custom tools
+#### 2. **Build Vercel-Compatible HTTP Client** (Day 2) - NOT STARTED
+**Location**: Create `packages/edgar-client/`
+- [ ] Create TypeScript client for HTTP MCP service
+- [ ] Implement fallback to direct SEC API
+- [ ] Add automatic failover logic
+- [ ] Include retry with exponential backoff
+- [ ] Add response caching layer
+- [ ] Write comprehensive tests
+- [ ] Integrate with existing rate limiter
 
-4. **Custom Thematic Search**
-   - Implement cross-document search
-   - Add vector similarity search
-   - Create aggregation tools
+#### 3. **Query Classification & Orchestration** (Day 3) - NOT STARTED
+**Location**: Create `packages/query-orchestrator/`
+- [ ] Build `classifyQuery()` function:
+  - Detect company-specific vs thematic patterns
+  - Return confidence scores
+- [ ] Implement `orchestrateCompanyQuery()`:
+  - Route to HTTP MCP service
+  - Handle fallback scenarios
+- [ ] Create `orchestrateThematicQuery()`:
+  - Route to custom search tools (to be built)
+- [ ] Build `combineResults()`:
+  - Merge responses from different sources
+  - Maintain citation tracking
+
+#### 4. **Custom Thematic Search Tools** (Days 4-5) - NOT STARTED
+**Location**: Create `packages/thematic-search/`
+- [ ] `bulkFilingDiscovery()`:
+  - Cross-company filing discovery
+  - Time-range and form-type filtering
+  - Progressive streaming for large results
+- [ ] `crossDocumentSearch()`:
+  - Content search across cached filings
+  - BM25 + vector similarity scoring
+  - Relevance ranking with recency weights
+- [ ] `filingContentIndex()`:
+  - Build searchable content index
+  - Extract sections using MCP tools
+  - Create metadata mappings
+
+#### 5. **Production Integration & Testing** (Day 5) - NOT STARTED
+- [ ] Deploy complete system to production
+- [ ] End-to-end testing of all query patterns
+- [ ] Validate SEC compliance and rate limiting
+- [ ] Performance testing and optimization
+- [ ] Documentation and runbooks
 
 ## Validation Evidence
 
