@@ -261,27 +261,35 @@ async function startServer() {
   try {
     console.log('🚀 Starting EDGAR MCP HTTP Bridge...');
     
-    // Initialize MCP client
-    const userAgent = process.env.SEC_EDGAR_USER_AGENT || 'EdgarAnswerEngine/1.0 (contact@example.com)';
-    console.log('📡 Connecting to EDGAR MCP with User-Agent:', userAgent);
-    
-    mcpClient = new EDGARMCPClient({ userAgent });
-    await mcpClient.connect();
-    isConnected = true;
-    
-    console.log('✅ EDGAR MCP client connected successfully');
-
-    // Test the connection
-    const tools = await mcpClient.listTools();
-    console.log(`🛠️  Found ${tools.tools?.length || 0} tools available`);
-
-    // Start HTTP server
+    // Start HTTP server first (Railway needs this for health checks)
     app.listen(port, () => {
       console.log(`🌐 HTTP Bridge server running on port ${port}`);
       console.log(`📋 Health check: http://localhost:${port}/health`);
       console.log(`🔍 List tools: http://localhost:${port}/tools`);
       console.log(`📞 Call tools: POST http://localhost:${port}/tools/call`);
     });
+
+    // Try to initialize MCP client (may fail in Railway due to Docker limitations)
+    try {
+      const userAgent = process.env.SEC_EDGAR_USER_AGENT || 'EdgarAnswerEngine/1.0 (contact@example.com)';
+      console.log('📡 Attempting to connect to EDGAR MCP with User-Agent:', userAgent);
+      
+      mcpClient = new EDGARMCPClient({ userAgent });
+      await mcpClient.connect();
+      isConnected = true;
+      
+      console.log('✅ EDGAR MCP client connected successfully');
+
+      // Test the connection
+      const tools = await mcpClient.listTools();
+      console.log(`🛠️  Found ${tools.tools?.length || 0} tools available`);
+    } catch (mcpError) {
+      console.warn('⚠️  MCP connection failed (expected in Railway environment):', mcpError instanceof Error ? mcpError.message : mcpError);
+      console.log('📡 HTTP Bridge server running without MCP integration - SEC API fallback will be used');
+      isConnected = false;
+      mcpClient = null;
+    }
+
   } catch (error) {
     console.error('❌ Failed to start HTTP Bridge server:', error);
     process.exit(1);
