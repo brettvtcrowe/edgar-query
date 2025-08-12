@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
 
     if (!result.success) {
       // Handle specific error types
-      if (result.pattern === QueryPattern.THEMATIC) {
+      if (result.pattern === 'thematic') {
         return NextResponse.json({
           success: false,
           error: 'thematic_not_implemented',
@@ -180,19 +180,19 @@ function formatSuccessMessage(result: any): string {
   const { pattern, data, metadata } = result;
   
   switch (pattern) {
-    case QueryPattern.COMPANY_SPECIFIC:
+    case 'company-specific':
       if (data.company) {
         return `📊 Found information for ${data.company.name} (${data.company.tickers?.[0]})`;
       }
       return '📊 Company information retrieved successfully';
       
-    case QueryPattern.METADATA_ONLY:
+    case 'metadata-only':
       if (data.filings?.length) {
         return `📄 Found ${data.filings.length} filing(s)`;
       }
       return '📄 Filing information retrieved successfully';
       
-    case QueryPattern.HYBRID:
+    case 'hybrid':
       return '🔍 Analysis completed combining company-specific and market data';
       
     default:
