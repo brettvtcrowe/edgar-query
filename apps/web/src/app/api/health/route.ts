@@ -1,13 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { checkDatabaseHealth, checkRedisHealth, checkBlobHealth } from '@/lib/health-checks';
+import { checkEDGARHealth } from '@/lib/edgar-client';
 
 export async function GET(request: NextRequest) {
   try {
-    const [database, redis, blob] = await Promise.allSettled([
+    const [database, redis, blob, edgar] = await Promise.allSettled([
       checkDatabaseHealth(),
       checkRedisHealth(),
       checkBlobHealth(),
+      checkEDGARHealth(),
     ]);
+
+    const edgarHealth = edgar.status === 'fulfilled' ? edgar.value : { client: false, mcp: false, dataSource: 'SEC_API' };
 
     const healthStatus = {
       status: 'ok',
@@ -17,6 +21,12 @@ export async function GET(request: NextRequest) {
         database: database.status === 'fulfilled' ? database.value : false,
         redis: redis.status === 'fulfilled' ? redis.value : false,
         blob: blob.status === 'fulfilled' ? blob.value : false,
+        edgar: edgarHealth.client,
+      },
+      edgar: {
+        client: edgarHealth.client,
+        mcp: edgarHealth.mcp,
+        dataSource: edgarHealth.dataSource,
       },
       version: '0.1.0',
     };
