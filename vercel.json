@@ -1,12 +1,13 @@
 {
-  "buildCommand": "npm run build",
-  "outputDirectory": ".next",
-  "devCommand": "npm run dev",
+  "buildCommand": "npm install && npm run build --workspace=@edgar-query/edgar-client && npm run build --workspace=@edgar-query/query-orchestrator && cd apps/web && npm run build",
+  "outputDirectory": "apps/web/.next",
+  "devCommand": "cd apps/web && npm run dev",
   "installCommand": "npm install",
   "framework": "nextjs",
   "functions": {
-    "src/app/api/**/*.ts": {
-      "runtime": "nodejs20.x"
+    "apps/web/src/app/api/**/*.ts": {
+      "runtime": "nodejs20.x",
+      "maxDuration": 30
     }
   }
 }
