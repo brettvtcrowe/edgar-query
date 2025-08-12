@@ -14,10 +14,43 @@ import { EDGARMCPClient } from './edgar-mcp-client.js';
 const app = express();
 const port = process.env.PORT || 3001;
 
+// CORS configuration for production
+const corsOptions = {
+  origin: process.env.ALLOWED_ORIGINS 
+    ? process.env.ALLOWED_ORIGINS.split(',')
+    : ['http://localhost:3000', 'https://*.vercel.app'],
+  credentials: true,
+  optionsSuccessStatus: 200
+};
+
 // Middleware
 app.use(helmet());
-app.use(cors());
+app.use(cors(corsOptions));
 app.use(express.json({ limit: '10mb' }));
+
+// API Key authentication middleware (skip for health check)
+const API_KEY = process.env.API_KEY;
+app.use((req, res, next) => {
+  // Skip auth for health check
+  if (req.path === '/health') {
+    return next();
+  }
+  
+  // Check API key in production
+  if (process.env.NODE_ENV === 'production' && API_KEY) {
+    const providedKey = req.headers['x-api-key'] || req.headers['authorization']?.replace('Bearer ', '');
+    if (providedKey !== API_KEY) {
+      return res.status(401).json({
+        success: false,
+        error: 'Unauthorized',
+        message: 'Invalid or missing API key',
+        timestamp: new Date().toISOString()
+      });
+    }
+  }
+  
+  next();
+});
 
 // Request/Response schemas
 const ToolCallRequestSchema = z.object({
