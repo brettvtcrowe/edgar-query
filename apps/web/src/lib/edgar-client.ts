@@ -13,39 +13,54 @@ let queryOrchestrator: QueryOrchestrator | null = null;
  * Get configured EDGAR client instance
  */
 export function getEDGARClient(): EDGARClient {
-  if (!edgarClient) {
-    // Initialize client with production configuration
-    edgarClient = new EDGARClient({
-      // MCP service configuration (primary)
-      mcpServiceUrl: process.env.EDGAR_MCP_SERVICE_URL,
-      mcpApiKey: process.env.EDGAR_MCP_API_KEY,
-      
-      // SEC API configuration (fallback)
-      secUserAgent: process.env.SEC_USER_AGENT || 'EdgarAnswerEngine/1.0 (support@edgarquery.com)',
-      
-      // Client configuration
-      enableFallback: true,
-      cacheEnabled: true,
-      cacheTTL: 300000, // 5 minutes
-      maxRetries: 3,
-      retryDelay: 1000,
-      timeout: 30000
-    });
+  // Only initialize during runtime, not build time
+  if (typeof window === 'undefined' && process.env.NODE_ENV === 'production') {
+    // Server-side runtime in production
+    if (!edgarClient) {
+      edgarClient = new EDGARClient({
+        // MCP service configuration (primary)
+        mcpServiceUrl: process.env.EDGAR_MCP_SERVICE_URL,
+        mcpApiKey: process.env.EDGAR_MCP_API_KEY,
+        
+        // SEC API configuration (fallback)
+        secUserAgent: process.env.SEC_USER_AGENT || 'EdgarAnswerEngine/1.0 (support@edgarquery.com)',
+        
+        // Client configuration
+        enableFallback: true,
+        cacheEnabled: true,
+        cacheTTL: 300000, // 5 minutes
+        maxRetries: 3,
+        retryDelay: 1000,
+        timeout: 30000
+      });
+    }
+  } else if (typeof window === 'undefined') {
+    // Build time or development - return a mock/placeholder
+    console.log('EDGAR Client: Build time initialization skipped');
+    return {} as EDGARClient;
   }
   
-  return edgarClient;
+  return edgarClient || ({} as EDGARClient);
 }
 
 /**
  * Get configured Query Orchestrator instance
  */
 export function getQueryOrchestrator(): QueryOrchestrator {
-  if (!queryOrchestrator) {
-    const client = getEDGARClient();
-    queryOrchestrator = new QueryOrchestrator(client);
+  // Only initialize during runtime, not build time
+  if (typeof window === 'undefined' && process.env.NODE_ENV === 'production') {
+    if (!queryOrchestrator) {
+      const client = getEDGARClient();
+      queryOrchestrator = new QueryOrchestrator(client);
+    }
+    return queryOrchestrator;
+  } else if (typeof window === 'undefined') {
+    // Build time - return mock
+    console.log('Query Orchestrator: Build time initialization skipped');
+    return {} as QueryOrchestrator;
   }
   
-  return queryOrchestrator;
+  return queryOrchestrator || ({} as QueryOrchestrator);
 }
 
 /**
