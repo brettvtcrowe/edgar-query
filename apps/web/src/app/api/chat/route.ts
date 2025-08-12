@@ -4,8 +4,6 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getQueryOrchestrator } from '@/lib/edgar-client';
-import { QueryPattern } from '@edgar-query/query-orchestrator';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -22,6 +20,10 @@ interface ChatRequest {
 
 export async function POST(request: NextRequest) {
   try {
+    // Dynamic imports to prevent build-time issues
+    const { getQueryOrchestrator } = await import('@/lib/edgar-client');
+    const { QueryPattern } = await import('@edgar-query/query-orchestrator');
+    
     const { messages, stream = false }: ChatRequest = await request.json();
     
     if (!messages || messages.length === 0) {
@@ -203,8 +205,7 @@ function formatSuccessMessage(result: any): string {
  */
 export async function GET() {
   try {
-    const orchestrator = getQueryOrchestrator();
-    
+    // Simple health check without initializing complex dependencies
     return NextResponse.json({
       status: 'ok',
       service: 'edgar-chat-api',
@@ -213,6 +214,12 @@ export async function GET() {
         companyQueries: true,
         thematicQueries: false, // Coming soon
         hybridQueries: 'partial'
+      },
+      environment: process.env.NODE_ENV,
+      hasRequiredEnvVars: {
+        mcpServiceUrl: !!process.env.EDGAR_MCP_SERVICE_URL,
+        mcpApiKey: !!process.env.EDGAR_MCP_API_KEY,
+        secUserAgent: !!process.env.SEC_USER_AGENT
       }
     });
   } catch (error) {
