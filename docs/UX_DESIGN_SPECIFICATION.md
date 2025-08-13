@@ -2,7 +2,6 @@
 
 ## Document Version
 - **Version**: 1.0.0
-- **Date**: 2024
 - **Status**: Ready for Implementation
 - **Design System**: EDGAR DS 1.0
 

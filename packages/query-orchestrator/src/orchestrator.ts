@@ -4,6 +4,7 @@
  */
 
 import { EDGARClient } from '@edgar-query/edgar-client';
+import { thematicSearch, type ThematicSearchParams, type ThematicProgressCallback } from '../../thematic-search/dist/index.js';
 import { QueryClassifier } from './query-classifier.js';
 import {
   QueryPattern,
@@ -20,8 +21,7 @@ export class QueryOrchestrator {
   private classifier = new QueryClassifier();
 
   constructor(
-    private edgarClient: EDGARClient,
-    private customSearchClient?: any // TODO: Will implement thematic search client
+    private edgarClient: EDGARClient
   ) {}
 
   /**
@@ -31,6 +31,11 @@ export class QueryOrchestrator {
     query: string, 
     context?: QueryContext
   ): Promise<QueryResult> {
+    // Ensure context has the original query
+    const enhancedContext = {
+      ...context,
+      originalQuery: query
+    };
     const startTime = Date.now();
     const toolsCalled: string[] = [];
     const sources: Array<{ type: 'mcp' | 'sec_api' | 'custom'; endpoint?: string; timestamp: string }> = [];
@@ -38,10 +43,10 @@ export class QueryOrchestrator {
 
     try {
       // Step 1: Classify the query
-      const classification = this.classifier.classifyQuery(query, context);
+      const classification = this.classifier.classifyQuery(query, enhancedContext);
       
       // Step 2: Create execution plan
-      const plan = this.createExecutionPlan(classification, context);
+      const plan = this.createExecutionPlan(classification, enhancedContext);
       
       // Step 3: Execute the plan
       const result = await this.executePlan(plan, {
@@ -181,38 +186,82 @@ export class QueryOrchestrator {
   ): QueryPlan {
     const steps = [];
 
-    // For now, this will be a placeholder until we implement custom thematic search
-    // In the future, this would use cross-document search capabilities
-    
+    // Use the new thematic search implementation
     steps.push({
-      type: 'search_content' as const,
-      tool: 'bulkFilingDiscovery', // TODO: Implement in thematic search
+      type: 'thematic_search' as const,
+      tool: 'thematicSearch',
       params: {
-        topics: entities?.topics || [],
-        forms: entities?.forms || [],
-        timeRange: entities?.timeRanges?.[0],
-        limit: context?.preferences?.maxResults || 20
+        query: context?.originalQuery || '',
+        formTypes: entities?.forms || ['10-K', '10-Q', '8-K'],
+        industries: entities?.companies ? undefined : this.extractIndustries(entities),
+        companies: entities?.tickers || entities?.companies,
+        dateRange: entities?.timeRanges?.[0] ? this.mapTimeRangeToDateRange(entities.timeRanges[0]) : undefined,
+        maxFilings: Math.min((context?.preferences?.maxResults || 50) * 2, 100), // Get more filings to search
+        maxResults: context?.preferences?.maxResults || 50,
+        sections: this.mapTopicsToSections(entities?.topics || []),
+        includeAggregations: true
       },
       priority: 1
     });
 
-    steps.push({
-      type: 'aggregate_results' as const,
-      tool: 'crossDocumentSearch', // TODO: Implement in thematic search
-      params: {
-        query: entities?.topics?.join(' ') || '',
-        filings: 'from_discovery'
-      },
-      priority: 2,
-      dependsOn: ['bulkFilingDiscovery']
-    });
-
+    // No additional steps needed - thematic search is comprehensive
     return {
-      classification: { pattern: QueryPattern.THEMATIC, confidence: 0.8, entities },
-      strategy: 'custom_primary',
+      classification: { pattern: QueryPattern.THEMATIC, confidence: 0.9, entities },
+      strategy: 'thematic_search',
       steps,
-      expectedResultType: 'aggregated_data',
-      estimatedDuration: 8000
+      expectedResultType: 'thematic_results',
+      estimatedDuration: 15000 // Thematic queries take longer
+    };
+  }
+  
+  /**
+   * Extract industries from entity context
+   */
+  private extractIndustries(entities: any): string[] | undefined {
+    const topics = entities?.topics || [];
+    const industries = [];
+    
+    // Map topics to industries - basic implementation
+    if (topics.some((t: string) => t.toLowerCase().includes('tech') || t.toLowerCase().includes('software') || t.toLowerCase().includes('artificial intelligence'))) {
+      industries.push('technology');
+    }
+    if (topics.some((t: string) => t.toLowerCase().includes('bank') || t.toLowerCase().includes('financial'))) {
+      industries.push('financial');
+    }
+    if (topics.some((t: string) => t.toLowerCase().includes('health') || t.toLowerCase().includes('pharma'))) {
+      industries.push('healthcare');
+    }
+    if (topics.some((t: string) => t.toLowerCase().includes('energy') || t.toLowerCase().includes('oil'))) {
+      industries.push('energy');
+    }
+    
+    return industries.length > 0 ? industries : undefined;
+  }
+  
+  /**
+   * Map time range entities to date range format
+   */
+  private mapTimeRangeToDateRange(timeRange: any): { start: string; end: string } | undefined {
+    if (!timeRange) return undefined;
+    
+    // Basic implementation - would be more sophisticated in production
+    const now = new Date();
+    let startDate = new Date();
+    
+    if (timeRange.includes('year')) {
+      startDate.setFullYear(now.getFullYear() - 1);
+    } else if (timeRange.includes('quarter')) {
+      startDate.setMonth(now.getMonth() - 3);
+    } else if (timeRange.includes('6 months')) {
+      startDate.setMonth(now.getMonth() - 6);
+    } else {
+      // Default to past year
+      startDate.setFullYear(now.getFullYear() - 1);
+    }
+    
+    return {
+      start: startDate.toISOString().split('T')[0],
+      end: now.toISOString().split('T')[0]
     };
   }
 
@@ -347,10 +396,31 @@ export class QueryOrchestrator {
             }
             break;
 
-          // Custom thematic search tools (TODO: Implement)
+          // Thematic search integration
+          case 'thematicSearch':
+            result = await thematicSearch(
+              step.params as ThematicSearchParams,
+              this.edgarClient,
+              (progress: any) => {
+                // Could add progress reporting here if needed
+                console.log(`Thematic search progress: ${progress.operation} ${progress.completed}/${progress.total}`);
+              }
+            );
+            callbacks.onSource({ 
+              type: 'custom',
+              endpoint: 'thematicSearch',
+              timestamp: new Date().toISOString()
+            });
+            // Generate citations from thematic search results
+            if (result?.results) {
+              citations.push(...this.generateCitationsFromThematicResults(result.results));
+            }
+            break;
+
+          // Legacy custom search tools (deprecated)
           case 'bulkFilingDiscovery':
           case 'crossDocumentSearch':
-            throw new ExecutionError(`Custom search tool '${step.tool}' not yet implemented. This requires the thematic search package.`);
+            throw new ExecutionError(`Tool '${step.tool}' is deprecated. Use 'thematicSearch' instead.`);
 
           default:
             throw new ExecutionError(`Unknown tool: ${step.tool}`);
@@ -444,6 +514,27 @@ export class QueryOrchestrator {
   }
 
   /**
+   * Generate citations from thematic search results
+   */
+  private generateCitationsFromThematicResults(results: any[]): any[] {
+    return results.map(result => ({
+      filingUrl: result.sourceUrl,
+      accession: result.filing.accession,
+      form: result.filing.form,
+      filedAt: result.filing.filedAt,
+      companyName: result.filing.companyName,
+      ticker: result.filing.ticker,
+      section: result.sectionTitle,
+      snippet: result.snippet,
+      startChar: result.snippetStart,
+      endChar: result.snippetEnd,
+      score: result.score,
+      matchCount: result.matchCount,
+      citationText: result.citationText
+    }));
+  }
+
+  /**
    * Helper: Consolidate results based on expected type
    */
   private consolidateResults(results: Record<string, any>, expectedType: string): any {
@@ -465,6 +556,11 @@ export class QueryOrchestrator {
           company: results.getCompanyInfo,
           sections: results.getFilingSections || [],
           filings: results.getRecentFilings || []
+        };
+
+      case 'thematic_results':
+        return {
+          thematicSearch: results.thematicSearch
         };
 
       case 'aggregated_data':

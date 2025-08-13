@@ -74,10 +74,10 @@ The system classifies queries into four types:
 
 | Query Type | Description | Example | Primary Tools |
 |------------|-------------|---------|---------------|
-| **Metadata** | Queries about filing metadata | "Last 10 filings from NVDA" | `list_filings` |
-| **Content** | Text search within filings | "Goodwill impairment in MD&A" | `search_text`, `extract_sections` |
-| **Hybrid** | Metadata filter + content search | "8-K corrections on revenue in last 6 months" | All tools combined |
-| **Numeric/XBRL** | Structured financial data | "Q/Q revenue change for AAPL" | `xbrl_facts` |
+| **Company-Specific** | Single company queries | "Apple's latest 10-K" | EDGAR MCP tools |
+| **Thematic** | Cross-company searches | "All companies mentioning AI" | Thematic search package |
+| **Hybrid** | Multi-company comparisons | "Compare Apple vs Microsoft revenue" | Both systems |
+| **Metadata** | Filing metadata only | "Count of 8-Ks filed today" | Direct SEC API |
 
 ### 2. EDGAR Database Capabilities
 
@@ -142,7 +142,85 @@ sequenceDiagram
 - **XML/XBRL**: Structured data for financial statements
 - **PDF**: Exhibits and older documents (OCR out of scope)
 
-### 4. Sectionizer Patterns
+### 4. Query Orchestration & Thematic Search
+
+#### Query Classification System
+
+```typescript
+interface QueryClassification {
+  pattern: 'COMPANY_SPECIFIC' | 'THEMATIC' | 'HYBRID' | 'METADATA_ONLY';
+  confidence: number;
+  entities: {
+    companies?: string[];
+    tickers?: string[];
+    forms?: string[];
+    timeRanges?: string[];
+    topics?: string[];
+  }
+}
+```
+
+#### Routing Strategy
+
+| Pattern | Primary System | Fallback | Example Query |
+|---------|---------------|----------|---------------|
+| COMPANY_SPECIFIC | EDGAR MCP via HTTP | Direct SEC API | "Apple's latest 10-K" |
+| THEMATIC | Thematic Search Package | EDGAR MCP bulk | "All companies mentioning AI" |
+| HYBRID | Parallel execution | Sequential fallback | "Compare Apple and Microsoft revenues" |
+| METADATA_ONLY | Direct SEC API | EDGAR MCP | "Count of 8-Ks filed today" |
+
+#### Thematic Search Architecture
+
+```typescript
+// Bulk Filing Discovery
+interface BulkDiscoveryParams {
+  formTypes?: FormType[];
+  dateRange?: { start: string; end: string };
+  industries?: Industry[];
+  companies?: string[];
+  maxResults?: number;
+  sortBy?: 'filed-date' | 'company' | 'relevance';
+}
+
+// Cross-Document Search  
+interface CrossSearchParams {
+  filings: DiscoveredFiling[];
+  query: string;
+  sections?: SectionType[];
+  maxResults?: number;
+  minScore?: number;
+  includeSnippets?: boolean;
+}
+```
+
+#### BM25 Scoring Implementation
+
+```typescript
+// Simplified BM25 formula
+score = Σ(IDF(qi) * (f(qi, D) * (k1 + 1)) / (f(qi, D) + k1 * (1 - b + b * (|D| / avgdl))))
+
+where:
+- k1 = 1.2 (term saturation)
+- b = 0.75 (length normalization)
+- IDF = inverse document frequency
+- f(qi, D) = term frequency in document
+- |D| = document length
+- avgdl = average document length
+```
+
+#### Progressive Streaming
+
+```typescript
+interface ProgressUpdate {
+  operation: 'discovery' | 'content-fetch' | 'search' | 'aggregation';
+  completed: number;
+  total: number;
+  currentItem?: string;
+  estimatedTimeRemaining?: number;
+}
+```
+
+### 5. Sectionizer Patterns
 
 #### 10-K/10-Q Sections
 

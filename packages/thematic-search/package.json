@@ -1,0 +1,41 @@
+{
+  "name": "@edgar-query/thematic-search",
+  "version": "1.0.0",
+  "description": "Cross-document search and bulk filing discovery for thematic queries",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "vitest",
+    "test:manual": "tsx src/test-thematic-search.ts manual",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@edgar-query/edgar-client": "workspace:*",
+    "@edgar-query/types": "workspace:*",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.5.0",
+    "typescript": "^5.1.6",
+    "vitest": "^1.0.0",
+    "tsx": "^4.0.0"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "keywords": [
+    "SEC",
+    "EDGAR",
+    "thematic-search",
+    "cross-document",
+    "filing-discovery"
+  ],
+  "author": "",
+  "license": "ISC"
+}

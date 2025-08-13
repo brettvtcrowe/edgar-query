@@ -13,7 +13,8 @@
   },
   "dependencies": {
     "zod": "^3.22.4",
-    "@edgar-query/edgar-client": "*"
+    "@edgar-query/edgar-client": "*",
+    "@edgar-query/thematic-search": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^20.5.0",

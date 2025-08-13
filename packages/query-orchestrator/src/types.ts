@@ -32,15 +32,15 @@ export type QueryClassification = z.infer<typeof QueryClassificationSchema>;
 // Query execution plan
 export const QueryPlanSchema = z.object({
   classification: QueryClassificationSchema,
-  strategy: z.enum(['mcp_primary', 'custom_primary', 'parallel', 'sequential']),
+  strategy: z.enum(['mcp_primary', 'custom_primary', 'parallel', 'sequential', 'thematic_search']),
   steps: z.array(z.object({
-    type: z.enum(['resolve_company', 'list_filings', 'search_content', 'analyze_filing', 'aggregate_results']),
+    type: z.enum(['resolve_company', 'list_filings', 'search_content', 'analyze_filing', 'aggregate_results', 'thematic_search']),
     tool: z.string(),
     params: z.record(z.any()),
     priority: z.number().optional(),
     dependsOn: z.array(z.string()).optional()
   })),
-  expectedResultType: z.enum(['company_data', 'filing_list', 'content_sections', 'aggregated_data', 'comparison']),
+  expectedResultType: z.enum(['company_data', 'filing_list', 'content_sections', 'aggregated_data', 'comparison', 'thematic_results']),
   estimatedDuration: z.number().optional()
 });
 
@@ -78,6 +78,7 @@ export type QueryResult = z.infer<typeof QueryResultSchema>;
 
 // Query context for orchestration
 export interface QueryContext {
+  originalQuery?: string;
   userId?: string;
   sessionId?: string;
   preferences?: {

@@ -1,8 +1,67 @@
 # EDGAR Answer Engine - Query Capabilities & Examples
 
+**Current Capabilities**: Company-specific + Thematic search implemented
+
 ## Overview
 
-This document outlines the full range of query capabilities supported by the EDGAR Answer Engine, based on architectural analysis and EDGAR database capabilities. It serves as a reference for understanding what types of questions the system can answer and how it processes different query patterns.
+This document outlines the full range of query capabilities supported by the EDGAR Answer Engine. The system now supports both **company-specific queries** (routed to EDGAR MCP service) and **thematic queries** (processed by custom cross-document search tools).
+
+## Query Classification & Routing
+
+The system automatically classifies queries into patterns and routes them to the appropriate processing system:
+
+| Query Pattern | Processing System | Example |
+|---------------|------------------|---------|
+| **Company-Specific** | EDGAR MCP via HTTP | "Apple's latest 10-K filing" |
+| **Thematic** | Thematic Search Package | "All companies mentioning cybersecurity" |
+| **Hybrid** | Both systems (parallel) | "Compare Apple vs Microsoft revenue recognition" |
+| **Metadata** | Direct SEC API | "How many 8-Ks were filed today?" |
+
+## New Thematic Search Capabilities ✅
+
+### Cross-Company Analysis
+**Status**: ✅ **IMPLEMENTED**
+
+The thematic search system enables queries that span multiple companies and documents:
+
+#### Industry-Wide Trend Analysis
+- ✅ "All technology companies mentioning artificial intelligence in their latest 10-Ks"
+- ✅ "Show me financial services companies that disclosed credit losses in the past year"
+- ✅ "Which healthcare companies mentioned FDA regulatory changes?"
+- ✅ "Find all energy companies discussing renewable energy investments"
+
+#### Cross-Document Topic Search  
+- ✅ "All companies mentioning revenue recognition changes in the past 2 years"
+- ✅ "Show me cybersecurity incident disclosures across all sectors"
+- ✅ "Find companies that mentioned supply chain disruptions"
+- ✅ "Which companies disclosed ASC 842 lease accounting impacts?"
+
+#### Temporal Pattern Analysis
+- ✅ "Compare AI risk disclosures between 2023 and 2024 10-Ks"
+- ✅ "Show me the evolution of climate change disclosures over time"
+- ✅ "Track mentions of inflation across quarterly filings"
+- ✅ "Find increasing mentions of cybersecurity in risk factors"
+
+#### Processing Architecture:
+```typescript
+// 1. Bulk Filing Discovery
+bulkFilingDiscovery({
+  industries: ['technology', 'financial'],
+  formTypes: ['10-K', '10-Q'],
+  dateRange: { start: '2024-01-01', end: '2024-12-31' }
+}) 
+
+// 2. Cross-Document Search
+crossDocumentSearch({
+  filings: discoveredFilings,
+  query: 'artificial intelligence',
+  sections: ['risk-factors', 'md&a'],
+  includeSnippets: true
+})
+
+// 3. Result Aggregation
+→ Ranked results with citations and company clustering
+```
 
 ## EDGAR Database Coverage
 
