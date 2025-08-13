@@ -1,6 +1,0 @@
-{
-  "buildCommand": "npm run build --workspace=@edgar-query/types && npm run build --workspace=@edgar-query/edgar-client && npm run build --workspace=@edgar-query/thematic-search && npm run build --workspace=@edgar-query/query-orchestrator && npm run build --workspace=@edgar-query/web",
-  "outputDirectory": "apps/web/.next",
-  "installCommand": "npm install",
-  "framework": "nextjs"
-}
