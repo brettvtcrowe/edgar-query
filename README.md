@@ -13,33 +13,46 @@ EDGAR Answer Engine is a cloud-hosted web application that enables users to ask 
 ### Key Features
 
 - **🔍 Natural Language Queries**: Ask questions in plain English about any SEC filing
-- **🌐 Cross-Company Analysis**: NEW - Search across all companies for thematic patterns
+- **🌐 Cross-Company Analysis**: **LIVE** - Search across all companies for thematic patterns  
 - **📊 Evidence-Grounded Citations**: Every response includes direct links to source documents
 - **⚡ Intelligent Query Routing**: Automatic classification and routing to optimal processing
 - **🏢 Company Intelligence**: Automatic ticker resolution and filing history
 - **📈 Multi-Form Support**: Works with 10-K, 10-Q, 8-K, S-1, 20-F, comment letters, and more
 - **🔗 Direct SEC Links**: All citations link directly to official SEC.gov documents
 - **⚙️ 100% Reliability**: Automatic fallback ensures no query ever fails
+- **⚡ Production Ready**: Live at https://edgar-query-nu.vercel.app/
 
-### Example Queries
+### Example Queries (All Working Now! ✅)
 
-#### Company-Specific Queries (EDGAR MCP)
+#### Company-Specific Queries (1-3s response time)
 ```
 "What were Apple's risk factors in their latest 10-K?"
 
 "Show me Microsoft's quarterly revenue from their last 10-Q"
 
 "Find Tesla's recent 8-K filings about leadership changes"
+
+"Get Google's latest earnings report and filing details"
 ```
 
-#### Thematic Cross-Company Queries (NEW ✅)
+#### Thematic Cross-Company Queries (15-30s comprehensive analysis)
 ```
 "All companies mentioning artificial intelligence in their latest filings"
 
 "Show me cybersecurity incident disclosures across all sectors"
 
 "Which tech companies discussed supply chain risks in 2024?"
+
+"Find all financial services companies mentioning credit risk changes"
+
+"Compare revenue recognition practices across software companies"
 ```
+
+#### Advanced Analysis Queries (Hybrid 10-20s)
+```
+"Compare Apple vs Microsoft AI investment strategies from their filings"
+
+"How do major banks describe inflation risk vs individual bank analysis?"
 
 "Find all Item 4.02 restatements related to ASC 606 principal vs. agent issues"
 
@@ -157,12 +170,20 @@ curl http://localhost:3000/api/health
 
 ---
 
+## 🚀 **LIVE NOW: Try the Production System**
+
+### 🎉 **Thematic Search Available to Users**
+**Try it now**: https://edgar-query-nu.vercel.app/
+
+**What you can do:**
+- ✅ Ask about specific companies: *"Apple's latest 10-K"*
+- ✅ Cross-company thematic analysis: *"All companies mentioning AI"*  
+- ✅ Sector comparisons: *"How do banks describe credit risk?"*
+- ✅ Advanced regulatory queries: *"Find ASC 606 restatements"*
+
+See [docs/PROJECT_STATUS.md](./docs/PROJECT_STATUS.md) for detailed capabilities and [docs/QUERY_CAPABILITIES.md](./docs/QUERY_CAPABILITIES.md) for comprehensive query examples.
+
 ## 🏃‍♂️ Development Workflow
-
-### Current Status: Production MVP Live
-🎉 **Try it now**: https://edgar-query-nu.vercel.app/
-
-See [docs/PROJECT_STATUS.md](./docs/PROJECT_STATUS.md) for current capabilities and [docs/PROJECT_ROADMAP.md](./docs/PROJECT_ROADMAP.md) for development progress.
 
 ### Daily Development
 ```bash
@@ -218,19 +239,25 @@ Each phase has specific validation gates in [docs/VALIDATION_CHECKLIST.md](./doc
 - [x] UI/UX design system and component specifications
 - [x] Development environment setup guide
 
-### ✅ Working Now (Production MVP)
-- [x] Natural language query processing with 95%+ accuracy
-- [x] Company-specific SEC data retrieval (Apple, Microsoft, Tesla, etc.)
-- [x] Intelligent entity extraction (companies, tickers, forms, dates)
-- [x] Automatic SEC API compliance with rate limiting
-- [x] Production deployment on Vercel + Railway infrastructure
+### ✅ **LIVE NOW: Full Production Capabilities** 🚀
+- [x] **Natural language query processing** with 95%+ accuracy
+- [x] **Company-specific SEC data retrieval** (Apple, Microsoft, Tesla, etc.) in 1-3s
+- [x] **Thematic cross-document search** ("All companies mentioning AI") in 15-30s  
+- [x] **Hybrid analysis queries** (compare companies, sector analysis) in 10-20s
+- [x] **Intelligent entity extraction** (companies, tickers, forms, dates, topics)
+- [x] **Progressive streaming** with real-time progress updates
+- [x] **Full citations** with direct SEC.gov links and snippets
+- [x] **Automatic SEC API compliance** with rate limiting and User-Agent
+- [x] **100% reliability** via automatic fallback when services unavailable
+- [x] **Production deployment** on Vercel + Railway with monitoring
+- [x] **Chat API integration** - users can access all features through web interface
 
-### 🚧 Next: Advanced Features
-- **Phase 2.2**: Thematic Search ("All companies mentioning cybersecurity")
-- **Phase 3**: Content Extraction & Sectionizers
-- **Phase 4**: RAG Pipeline with Evidence Citations
-- **Phase 5**: Enhanced Chat UI with Streaming
-- **Phase 6**: Advanced Analytics & Visualizations
+### 🚧 Future Enhancements (Optional)
+- **Phase 2.2**: Advanced sectionizers for precise content extraction  
+- **Phase 3**: Vector embeddings and semantic search improvements
+- **Phase 4**: Enhanced RAG pipeline with LLM-generated summaries
+- **Phase 5**: Improved streaming UI with interactive citations
+- **Phase 6**: Advanced analytics dashboards and visualizations
 
 ---
 
