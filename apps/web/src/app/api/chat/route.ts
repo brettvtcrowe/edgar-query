@@ -65,12 +65,12 @@ export async function POST(request: NextRequest) {
     });
 
     if (!result.success) {
-      // Handle specific error types
-      if (result.pattern === 'thematic') {
+      // Handle specific error types - thematic is now supported!
+      if (result.pattern === 'thematic' && result.metadata.errors?.[0]?.includes('not implemented')) {
         return NextResponse.json({
           success: false,
-          error: 'thematic_not_implemented',
-          message: '🔄 Cross-company analysis is coming soon!',
+          error: 'thematic_temporarily_unavailable',
+          message: '⚠️ Cross-company analysis temporarily unavailable. Please try again.',
           suggestion: 'Try asking about specific companies instead.',
           pattern: result.pattern,
           alternativeQueries: generateAlternativeQueries(query),
@@ -195,6 +195,15 @@ function formatSuccessMessage(result: any): string {
     case 'hybrid':
       return '🔍 Analysis completed combining company-specific and market data';
       
+    case 'thematic':
+      if (data.companies?.length) {
+        return `🌐 Found information across ${data.companies.length} companies`;
+      }
+      if (data.filings?.length) {
+        return `🌐 Cross-company analysis complete: ${data.filings.length} filings reviewed`;
+      }
+      return '🌐 Cross-company thematic analysis completed';
+      
     default:
       return '✅ Query processed successfully';
   }
@@ -212,7 +221,7 @@ export async function GET() {
       timestamp: new Date().toISOString(),
       capabilities: {
         companyQueries: true,
-        thematicQueries: false, // Coming soon
+        thematicQueries: true, // NOW AVAILABLE!
         hybridQueries: 'partial'
       },
       environment: process.env.NODE_ENV,

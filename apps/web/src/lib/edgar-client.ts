@@ -14,8 +14,8 @@ let queryOrchestrator: QueryOrchestrator | null = null;
  */
 export function getEDGARClient(): EDGARClient {
   // Only initialize during runtime, not build time
-  if (typeof window === 'undefined' && process.env.NODE_ENV === 'production') {
-    // Server-side runtime in production
+  if (typeof window === 'undefined') {
+    // Server-side runtime (both dev and prod)
     if (!edgarClient) {
       edgarClient = new EDGARClient({
         // MCP service configuration (primary)
@@ -33,13 +33,12 @@ export function getEDGARClient(): EDGARClient {
         retryDelay: 1000,
         timeout: 30000
       });
+      console.log('✅ EDGAR Client initialized');
     }
-  } else if (typeof window === 'undefined') {
-    // Build time or development - return a mock/placeholder
-    console.log('EDGAR Client: Build time initialization skipped');
-    return {} as EDGARClient;
+    return edgarClient;
   }
   
+  // Fallback (shouldn't reach here in API routes)
   return edgarClient || ({} as EDGARClient);
 }
 
@@ -48,18 +47,17 @@ export function getEDGARClient(): EDGARClient {
  */
 export function getQueryOrchestrator(): QueryOrchestrator {
   // Only initialize during runtime, not build time
-  if (typeof window === 'undefined' && process.env.NODE_ENV === 'production') {
+  if (typeof window === 'undefined') {
+    // Server-side runtime (both dev and prod)
     if (!queryOrchestrator) {
       const client = getEDGARClient();
       queryOrchestrator = new QueryOrchestrator(client);
+      console.log('✅ Query Orchestrator initialized');
     }
     return queryOrchestrator;
-  } else if (typeof window === 'undefined') {
-    // Build time - return mock
-    console.log('Query Orchestrator: Build time initialization skipped');
-    return {} as QueryOrchestrator;
   }
   
+  // Fallback (shouldn't reach here in API routes)
   return queryOrchestrator || ({} as QueryOrchestrator);
 }
 

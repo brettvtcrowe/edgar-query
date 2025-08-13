@@ -29,6 +29,7 @@
     "zod": "^3.22.4",
     "@edgar-query/edgar-client": "*",
     "@edgar-query/query-orchestrator": "*",
+    "@edgar-query/thematic-search": "*",
     "ai": "^3.4.0",
     "@ai-sdk/openai": "^0.0.65",
     "tailwindcss": "^3.3.0",
