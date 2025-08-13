@@ -13,8 +13,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@edgar-query/edgar-client": "workspace:*",
-    "@edgar-query/types": "workspace:*",
+    "@edgar-query/edgar-client": "*",
+    "@edgar-query/types": "*",
     "zod": "^3.22.4"
   },
   "devDependencies": {
