@@ -63,19 +63,32 @@ EDGAR Answer Engine is a cloud-hosted web application that enables users to ask 
 
 ## 🏗️ Architecture
 
+**Current Production Architecture (Simplified)**
+
 ```
-Browser (Next.js) → /api/chat → Query Router → MCP Tools → SEC APIs
-                                      ↓
-                   Evidence Store (PostgreSQL + pgvector + Blob)
-                                      ↓
-                   RAG Pipeline → Answer Composer → Citations
+Browser (Next.js) → Chat API → Query Orchestrator → Dual-Mode Execution
+                                        ↓
+                              ┌─────────────────┬─────────────────┐
+                              ▼                 ▼                 ▼
+                    Company-Specific     Thematic Search    Metadata-Only
+                    ┌─────────────┐     ┌─────────────┐    ┌─────────────┐
+                    │ EDGAR MCP   │     │ Custom      │    │ Direct SEC  │
+                    │ (HTTP)      │     │ Cross-Doc   │    │ API         │
+                    │             │     │ Search      │    │             │
+                    └─────────────┘     └─────────────┘    └─────────────┘
+                            │                   │                  │
+                            ▼                   ▼                  ▼
+                      [Automatic Fallback to SEC APIs if services fail]
+                                        ↓
+                            Citations + Results with SEC.gov Links
 ```
 
 **Core Principles:**
-- **Accuracy First**: Every claim backed by retrieved evidence
-- **No EDGAR Mirroring**: Fetch on-demand with short TTL caching
-- **Tool-First**: LLM orchestrates; tools provide facts
-- **Compliance**: Proper User-Agent, rate limiting, backoff
+- **Tool-First Orchestration**: Query orchestrator routes to appropriate tools
+- **No EDGAR Mirroring**: Fetch on-demand with intelligent caching
+- **100% Reliability**: Automatic fallback ensures no query fails
+- **Direct Citation**: All results linked to original SEC.gov sources
+- **SEC Compliance**: Proper User-Agent, rate limiting, respect for SEC infrastructure
 
 ---
 
