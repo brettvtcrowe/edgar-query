@@ -1,0 +1,85 @@
+# EDGAR Answer Engine - Documentation Index
+
+## 📚 Documentation Organization
+
+### 🎯 Current Status
+- **[PROJECT_STATUS.md](./PROJECT_STATUS.md)** - Current project status and progress (Phase 2.1 - 90% Complete)
+
+### 🚀 Getting Started
+- **[SETUP_GUIDE.md](./SETUP_GUIDE.md)** - Complete environment setup and installation
+- **[DEVELOPMENT_GUIDE.md](./DEVELOPMENT_GUIDE.md)** - Code examples and development workflow
+
+### 🗺️ Planning & Architecture
+- **[PROJECT_ROADMAP.md](./PROJECT_ROADMAP.md)** - Development timeline and phases
+- **[ARCHITECTURE_REFERENCE.md](./ARCHITECTURE_REFERENCE.md)** - Complete technical architecture
+- **[VALIDATION_CHECKLIST.md](./VALIDATION_CHECKLIST.md)** - Acceptance criteria for each phase
+
+### 🎨 Design & UX
+- **[UX_DESIGN_SPECIFICATION.md](./UX_DESIGN_SPECIFICATION.md)** - UI/UX design system
+
+### 🚢 Deployment & Operations
+- **[MVP_DEPLOYMENT_GUIDE.md](./MVP_DEPLOYMENT_GUIDE.md)** - MVP deployment instructions
+- **[VERCEL_SETUP.md](./VERCEL_SETUP.md)** - Vercel deployment configuration
+- **[RAILWAY_DEPLOYMENT.md](./RAILWAY_DEPLOYMENT.md)** - Railway service deployment
+- **[RAILWAY_TROUBLESHOOTING.md](./RAILWAY_TROUBLESHOOTING.md)** - Railway troubleshooting guide
+- **[EDGAR_MCP_DEPLOYMENT_PLAN.md](./EDGAR_MCP_DEPLOYMENT_PLAN.md)** - MCP integration deployment strategy
+
+### 🧪 Testing & Validation
+- **[MVP_TESTING.md](./MVP_TESTING.md)** - MVP testing procedures
+- **[LAUNCH_TASKS.md](./LAUNCH_TASKS.md)** - Pre-launch checklist
+
+### 🛠️ Technical Reference
+- **[technical_guide.md](./technical_guide.md)** - Deep technical implementation guide
+
+### 📁 Subdirectories
+
+#### 👤 Agent Profiles (`agents/`)
+Specialized agent roles and responsibilities for AI-assisted development:
+- architect.md - System architecture agent
+- backend.md - Backend development agent
+- frontend.md - Frontend development agent
+- devops.md - DevOps and deployment agent
+- pm.md - Project management agent
+- qa.md - Quality assurance agent
+- security.md - Security review agent
+- ux.md - UX design agent
+
+#### ✅ Completed Phases (`completed/`)
+Detailed records of completed development phases:
+- Phase-1.1-Foundation-Completed.md
+- Phase-1.2-Core-Data-Layer-Completed.md
+- Phase-1.3-SEC-Data-Foundation-Completed.md
+- Phase-2.1-EDGAR-Client-Completed.md
+- Phase-2.1-HTTP-Bridge-Completed.md
+- Phase-2.1-Query-Orchestration-Completed.md
+
+#### 🔧 Development Tools (`dev-tools/`)
+Development utilities and helper scripts
+
+---
+
+## 🔍 Quick Reference
+
+### For New Developers
+1. Start with [SETUP_GUIDE.md](./SETUP_GUIDE.md)
+2. Review [PROJECT_STATUS.md](./PROJECT_STATUS.md)
+3. Read [DEVELOPMENT_GUIDE.md](./DEVELOPMENT_GUIDE.md)
+
+### For Deployment
+1. Check [MVP_DEPLOYMENT_GUIDE.md](./MVP_DEPLOYMENT_GUIDE.md)
+2. Follow [VERCEL_SETUP.md](./VERCEL_SETUP.md) for web app
+3. Use [RAILWAY_DEPLOYMENT.md](./RAILWAY_DEPLOYMENT.md) for services
+
+### For Architecture Decisions
+1. Review [ARCHITECTURE_REFERENCE.md](./ARCHITECTURE_REFERENCE.md)
+2. Check [PROJECT_ROADMAP.md](./PROJECT_ROADMAP.md) for phases
+3. See [technical_guide.md](./technical_guide.md) for implementation details
+
+### For Project Status
+1. **Current Status**: [PROJECT_STATUS.md](./PROJECT_STATUS.md)
+2. **Completed Work**: See `completed/` folder
+3. **Next Steps**: Check PROJECT_STATUS.md Priority Task List
+
+---
+
+Last Updated: August 13, 2025

@@ -297,6 +297,7 @@ Build a cloud-hosted web application that answers natural language queries about
    - Create bulk discovery system:
      - Time-range queries ("past year", "Q3 2024")
      - Form type filtering with smart prioritization
+     - **IMPORTANT**: Include UPLOAD/CORRESP forms for SEC comment letters
      - Industry/sector cross-analysis
      - Content similarity clustering
    - Implement progressive result streaming for large datasets
@@ -336,13 +337,21 @@ Build a cloud-hosted web application that answers natural language queries about
    - MD&A extraction
    - Risk Factors extraction
    - Notes extraction
+   - Accounting policy sections
 
 2. Build 8-K sectionizer
-   - Item number mapping
+   - Item number mapping (including Item 4.02 for restatements)
    - Event categorization
    - Exhibit handling
+   - Financial restatement detection
 
-3. Create section storage
+3. Build comment letter sectionizer
+   - UPLOAD form parsing (SEC comment letters)
+   - CORRESP form parsing (company responses)
+   - Topic extraction and categorization
+   - Regulatory concern identification
+
+4. Create section storage
    - Store in Blob
    - Track with database
    - Hash for deduplication

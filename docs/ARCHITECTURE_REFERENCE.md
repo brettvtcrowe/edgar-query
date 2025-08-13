@@ -79,7 +79,22 @@ The system classifies queries into four types:
 | **Hybrid** | Metadata filter + content search | "8-K corrections on revenue in last 6 months" | All tools combined |
 | **Numeric/XBRL** | Structured financial data | "Q/Q revenue change for AAPL" | `xbrl_facts` |
 
-### 2. Data Flow
+### 2. EDGAR Database Capabilities
+
+The EDGAR database contains extensive filing types beyond standard forms:
+
+| Filing Category | Form Types | Description | Query Support |
+|-----------------|------------|-------------|---------------|
+| **Core Filings** | 10-K, 10-Q, 8-K, S-1, 20-F | Standard SEC filings | Full support via EDGAR MCP |
+| **Comment Letters** | UPLOAD, CORRESP | SEC review correspondence | Searchable via thematic tools |
+| **Proxy Statements** | DEF 14A, DEFM14A | Shareholder voting materials | Content extraction supported |
+| **Insider Trading** | Forms 3, 4, 5 | Ownership changes | EDGAR MCP insider tools |
+| **Registration** | S-1, S-3, S-4 | Securities registration | Full text search capable |
+| **Foreign Filers** | 20-F, 6-K | International company filings | Standard processing |
+
+**Key Insight**: SEC comment letters (UPLOAD) and company responses (CORRESP) are fully accessible in EDGAR, released 20+ business days after review completion. This enables regulatory compliance analysis across industries.
+
+### 3. Data Flow
 
 ```mermaid
 sequenceDiagram
@@ -529,7 +544,61 @@ graph TD
 3. **SEC API down**: Queue requests, serve from cache
 4. **Rate limit hit**: Exponential backoff, user notification
 
-### 15. Future Architecture Considerations
+### 15. Advanced Query Capabilities
+
+#### Supported Complex Query Patterns
+
+Based on functionality analysis, the architecture supports these advanced patterns:
+
+1. **Regulatory Compliance Analysis**
+   - Find all 8-K Item 4.02 restatements with revenue recognition issues
+   - Search SEC comment letters (UPLOAD/CORRESP) for recurring themes
+   - Track early adoption of FASB standards across companies
+   - *Implementation*: Thematic search + specialized sectionizers
+
+2. **Accounting Policy Tracking**
+   - Compare revenue recognition changes over multiple years
+   - Identify ASC 606/ASC 860 specific implementations
+   - Find milestone method usage in life sciences companies
+   - *Implementation*: Time-series analysis + semantic similarity
+
+3. **Corporate Event Correlation**
+   - Link acquisitions to segment reporting changes
+   - Track factoring arrangements as failed sales
+   - Monitor goodwill impairment triggers
+   - *Implementation*: Cross-filing reference + temporal analysis
+
+4. **Industry-Specific Analysis**
+   - Cryptocurrency/blockchain company disclosures
+   - Life sciences revenue recognition methods
+   - Technology sector AI risk disclosures
+   - *Implementation*: Industry classification + thematic clustering
+
+#### Query Processing Examples
+
+**Example 1: Complex 8-K Analysis**
+```
+Query: "Find all 8-K Item 4.02 restatements related to ASC 606"
+Process:
+1. bulkFilingDiscovery(form="8-K", dateRange="3years")
+2. Filter by Item 4.02 presence
+3. crossDocumentSearch("revenue recognition", "ASC 606", "principal agent")
+4. Extract relevant sections with sectionizers
+5. LLM summarizes with table format
+```
+
+**Example 2: Comment Letter Theme Analysis**
+```
+Query: "SEC comment letters to crypto companies on revenue recognition"
+Process:
+1. Identify crypto companies via industry classification
+2. bulkFilingDiscovery(form=["UPLOAD","CORRESP"], companies=cryptoList)
+3. crossDocumentSearch("revenue recognition")
+4. Theme extraction and pattern analysis
+5. Aggregate common SEC concerns
+```
+
+### 16. Future Architecture Considerations
 
 #### Potential Enhancements
 

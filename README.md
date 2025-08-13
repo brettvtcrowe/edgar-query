@@ -30,7 +30,15 @@ EDGAR Answer Engine is a cloud-hosted web application that enables users to ask 
 "Compare quarterly revenue trends for NVIDIA over the past year"
 
 "Find examples of goodwill impairment triggering events"
+
+"Search SEC comment letters to crypto companies about revenue recognition"
+
+"Find all Item 4.02 restatements related to ASC 606 principal vs. agent issues"
+
+"Which life sciences companies use the milestone method for revenue recognition?"
 ```
+
+> **Full Capabilities**: See [docs/QUERY_CAPABILITIES.md](./docs/QUERY_CAPABILITIES.md) for comprehensive examples and supported query patterns including regulatory compliance analysis, accounting policy tracking, and SEC comment letter searches.
 
 ## 🏗️ Architecture
 
@@ -83,6 +91,9 @@ Browser (Next.js) → /api/chat → Query Router → MCP Tools → SEC APIs
 - **[docs/VALIDATION_CHECKLIST.md](./docs/VALIDATION_CHECKLIST.md)** - Acceptance criteria for each phase
   - *When to use*: Testing features, validating phase completion, production readiness
   - *Contains*: Phase checklists, acceptance tests, performance benchmarks, sign-off criteria
+- **[docs/QUERY_CAPABILITIES.md](./docs/QUERY_CAPABILITIES.md)** - Comprehensive query examples and capabilities
+  - *When to use*: Understanding what queries the system can answer, planning use cases
+  - *Contains*: Advanced query patterns, SEC filing coverage, regulatory compliance analysis
 
 ### 🛠️ Technical Reference
 - **[docs/technical_guide.md](./docs/technical_guide.md)** - Deep technical implementation guide
