@@ -29,17 +29,24 @@ export const IndustrySchema = z.enum([
 export type Industry = z.infer<typeof IndustrySchema>;
 
 /**
- * SEC form types for discovery
+ * SEC form types for discovery - use string to allow any form type
+ * Common forms: 10-K, 10-Q, 8-K, S-1, S-3, S-4, 20-F, 6-K, DEF 14A, etc.
  */
-export const FormTypeSchema = z.enum([
+export const FormTypeSchema = z.string().describe('SEC form type (e.g., 10-K, 10-Q, 8-K)');
+
+export type FormType = z.infer<typeof FormTypeSchema>;
+
+/**
+ * Common form types for reference
+ */
+export const COMMON_FORM_TYPES = [
   '10-K', '10-Q', '8-K', 
   'S-1', 'S-3', 'S-4',
   '20-F', '6-K',
   'DEF 14A', 'DEFM14A',
-  'UPLOAD', 'CORRESP'
-]);
-
-export type FormType = z.infer<typeof FormTypeSchema>;
+  'UPLOAD', 'CORRESP',
+  '13F-HR', '4', '11-K', 'SD'
+] as const;
 
 /**
  * Section types for targeted search
