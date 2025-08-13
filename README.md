@@ -227,7 +227,7 @@ Each phase has specific validation gates in [docs/VALIDATION_CHECKLIST.md](./doc
 - **Vercel** - Hosting and deployment platform
 
 ### Data & AI
-- **PostgreSQL + pgvector** - Vector database for embeddings
+- **PostgreSQL** - Database for metadata and caching
 - **Prisma** - Database ORM and migrations
 - **OpenAI/Anthropic APIs** - LLM for query processing
 - **MCP (Model Context Protocol)** - Tool orchestration layer
@@ -267,10 +267,10 @@ Each phase has specific validation gates in [docs/VALIDATION_CHECKLIST.md](./doc
 
 ### 🚧 Future Enhancements (Optional)
 - **Phase 2.2**: Advanced sectionizers for precise content extraction  
-- **Phase 3**: Vector embeddings and semantic search improvements
-- **Phase 4**: Enhanced RAG pipeline with LLM-generated summaries
-- **Phase 5**: Improved streaming UI with interactive citations
-- **Phase 6**: Advanced analytics dashboards and visualizations
+- **Phase 3**: Enhanced caching and performance optimizations
+- **Phase 4**: Improved streaming UI with interactive citations
+- **Phase 5**: Advanced analytics dashboards and visualizations
+- **Phase 6**: Multi-language support and international filings
 
 ---
 

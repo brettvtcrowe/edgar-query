@@ -7,9 +7,8 @@ generator client {
 }
 
 datasource db {
-  provider   = "postgresql"
-  url        = env("DATABASE_URL")
-  extensions = [vector]
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model Company {
@@ -46,6 +45,7 @@ model Filing {
   company   Company @relation(fields: [cik], references: [cik])
   cik       String
   sections  Section[]
+  // Note: Sections used for metadata only, content fetched on-demand
   
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -71,7 +71,7 @@ model Section {
   
   filing   Filing @relation(fields: [filingId], references: [id], onDelete: Cascade)
   filingId String
-  chunks   Chunk[]
+  // Note: No chunks needed - content processed on-demand
   
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -83,23 +83,8 @@ model Section {
   @@map("sections")
 }
 
-model Chunk {
-  id        String                     @id @default(cuid())
-  content   String
-  embedding Unsupported("vector(1536)")?
-  startPos  Int
-  endPos    Int
-  tokens    Int?      // Token count for the chunk
-  
-  section   Section @relation(fields: [sectionId], references: [id], onDelete: Cascade)
-  sectionId String
-  
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([sectionId])
-  @@map("chunks")
-}
+// NOTE: Chunk model removed - using tool-first architecture with on-demand processing
+// No content storage needed, everything fetched and processed in real-time
 
 model Answer {
   id           String @id @default(cuid())

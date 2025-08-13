@@ -47,9 +47,10 @@
 └─────────────────────────────────────────────────────────────┘
 ```
 
-**Key Difference from Original Design**: 
-- ❌ **NOT IMPLEMENTED**: Vector embeddings, RAG pipeline, content storage
-- ✅ **ACTUALLY IMPLEMENTED**: Direct tool orchestration with on-demand fetching
+**Current Architecture (Production Ready)**: 
+- ✅ **TOOL-FIRST ORCHESTRATION**: Direct API calls via EDGAR MCP tools
+- ✅ **ON-DEMAND PROCESSING**: No content storage, fetch and process in real-time
+- ✅ **BM25 TEXT SEARCH**: Simple, fast, and effective for cross-document queries
 
 ## Core Components
 
@@ -83,11 +84,11 @@ The EDGAR database contains extensive filing types beyond standard forms:
 
 **IMPORTANT**: The system architecture evolved significantly during development. The current implementation prioritizes **tool-first orchestration** over the originally planned RAG pipeline approach.
 
-#### What Was Originally Planned (Not Implemented):
-- ❌ Vector embeddings and semantic search 
-- ❌ Content preprocessing and storage in PostgreSQL/pgvector
-- ❌ Advanced sectionizers and chunking
-- ❌ RAG pipeline with answer composition
+#### What Was Originally Planned (Decided Against):
+- ❌ Vector embeddings and semantic search (unnecessary complexity)
+- ❌ Content preprocessing and storage (on-demand is faster and simpler)
+- ❌ Advanced chunking (BM25 search works well on full sections)
+- ❌ RAG pipeline (direct tool responses are more accurate)
 
 #### What Was Actually Built (Production Ready):
 - ✅ Query classification and intelligent routing (95% accuracy)
@@ -97,11 +98,12 @@ The EDGAR database contains extensive filing types beyond standard forms:
 - ✅ 100% reliability through automatic SEC API fallback
 - ✅ Direct citation generation with SEC.gov links
 
-**Why This Approach Works Better:**
-- **Faster Time to Market**: Tool orchestration was faster to implement than full RAG
-- **More Reliable**: Direct API calls with fallback vs. complex pipeline dependencies
-- **SEC Compliant**: Respects SEC infrastructure by fetching on-demand
-- **Accurate Citations**: Direct links to source documents vs. processed content
+**Why Tool-First Architecture Is Superior:**
+- **Simpler & More Reliable**: Direct API calls with automatic fallback
+- **SEC Compliant**: Respects SEC infrastructure, no data mirroring
+- **Accurate Citations**: Direct links to original documents
+- **Lower Maintenance**: No complex indexing, embeddings, or storage pipeline
+- **Real-time Data**: Always fetches latest filings without sync delays
 
 ### 3. Data Flow (Current Implementation)
 

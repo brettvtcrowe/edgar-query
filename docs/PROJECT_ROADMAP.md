@@ -12,7 +12,7 @@ Build a cloud-hosted web application that answers natural language queries about
 - **Progressive results** ✅ - Real-time streaming for complex searches
 - **SEC compliance** ✅ - Proper User-Agent, rate limiting, backoff
 
-**NOTE**: This roadmap reflects the original development plan. The actual implementation evolved to prioritize **tool orchestration** over **RAG pipeline** approaches, achieving faster time-to-market with production-ready capabilities.
+**NOTE**: This roadmap reflects the original development plan. The actual implementation successfully chose **tool orchestration** over **vector/RAG approaches**, achieving production-ready capabilities with simpler architecture and better reliability.
 
 ## 🎯 **CURRENT STATUS (August 2025)**
 
@@ -409,32 +409,32 @@ Build a cloud-hosted web application that answers natural language queries about
 - [ ] Offsets correctly map to source documents
 - [ ] Discovery patterns work for common thematic queries
 
-### RAG Pipeline Phase
-*Now we can answer questions*
+### Performance Optimization Phase
+*Focus on speed and reliability*
 
-#### Phase 4.1: Embeddings & Vector Search
+#### Phase 4.1: Caching & Performance
 **Duration**: 3 days
 
 **Tasks**:
-1. Implement chunking
-   - 1-2k char chunks
-   - 200 char overlap
-   - Maintain boundaries
+1. Implement intelligent caching
+   - Company metadata caching
+   - Recent filings cache
+   - Query result caching
 
-2. Add embedding generation
-   - Choose embedding model
-   - Batch processing
-   - Store in pgvector
+2. Add performance monitoring
+   - Response time tracking
+   - Success rate monitoring
+   - Error rate alerts
 
-3. Implement hybrid search
-   - Combine BM25 + vector scores
-   - Weighted combination
-   - Re-ranking logic
+3. Optimize search algorithms
+   - BM25 performance tuning
+   - Parallel processing
+   - Smart timeout handling
 
 **Validation Gate**:
-- [ ] Chunks properly overlapped
-- [ ] Embeddings stored and queryable
-- [ ] Hybrid search improves recall
+- [ ] Average response time <3s for company queries
+- [ ] Average response time <15s for thematic queries
+- [ ] 99.9% uptime maintained
 
 #### Phase 4.2: Answer Composition
 **Duration**: 3 days
