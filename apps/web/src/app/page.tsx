@@ -12,7 +12,8 @@ interface Message {
 interface ChatResponse {
   success: boolean;
   pattern?: string;
-  message?: string;
+  answer?: string;  // LLM-generated response
+  message?: string; // Status message
   data?: any;
   sources?: any[];
   citations?: any[];
@@ -65,33 +66,49 @@ export default function HomePage() {
       let assistantMetadata = result.metadata;
 
       if (result.success) {
-        // Format successful response
-        assistantContent = `${result.message || 'Query completed successfully'}\n\n`;
-        
-        if (result.data?.company) {
-          assistantContent += `**Company**: ${result.data.company.name}`;
-          if (result.data.company.tickers?.length) {
-            assistantContent += ` (${result.data.company.tickers.join(', ')})`;
+        // Use LLM-generated answer if available, otherwise fall back to formatted response
+        if (result.answer) {
+          assistantContent = result.answer;
+          
+          // Add metadata footer
+          let footer = '';
+          if (result.sources?.length) {
+            footer += `\n\n**Sources**: ${result.sources.map(s => s.type).join(', ')}`;
           }
-          assistantContent += '\n';
-          if (result.data.company.sicDescription) {
-            assistantContent += `**Industry**: ${result.data.company.sicDescription}\n`;
+          if (result.metadata?.executionTime) {
+            footer += `\n*Query completed in ${result.metadata.executionTime}ms*`;
           }
-        }
+          assistantContent += footer;
+          
+        } else {
+          // Fallback to formatted metadata response
+          assistantContent = `${result.message || 'Query completed successfully'}\n\n`;
+          
+          if (result.data?.company) {
+            assistantContent += `**Company**: ${result.data.company.name}`;
+            if (result.data.company.tickers?.length) {
+              assistantContent += ` (${result.data.company.tickers.join(', ')})`;
+            }
+            assistantContent += '\n';
+            if (result.data.company.sicDescription) {
+              assistantContent += `**Industry**: ${result.data.company.sicDescription}\n`;
+            }
+          }
 
-        if (result.data?.filings?.length) {
-          assistantContent += `\n**Recent Filings** (${result.data.filings.length}):\n`;
-          result.data.filings.slice(0, 5).forEach((filing: any) => {
-            assistantContent += `• ${filing.form} - Filed ${new Date(filing.filingDate).toLocaleDateString()}\n`;
-          });
-        }
+          if (result.data?.filings?.length) {
+            assistantContent += `\n**Recent Filings** (${result.data.filings.length}):\n`;
+            result.data.filings.slice(0, 5).forEach((filing: any) => {
+              assistantContent += `• ${filing.form} - Filed ${new Date(filing.filingDate).toLocaleDateString()}\n`;
+            });
+          }
 
-        if (result.sources?.length) {
-          assistantContent += `\n**Data Sources**: ${result.sources.map(s => s.type).join(', ')}`;
-        }
+          if (result.sources?.length) {
+            assistantContent += `\n**Data Sources**: ${result.sources.map(s => s.type).join(', ')}`;
+          }
 
-        if (result.metadata?.executionTime) {
-          assistantContent += `\n*Query completed in ${result.metadata.executionTime}ms*`;
+          if (result.metadata?.executionTime) {
+            assistantContent += `\n*Query completed in ${result.metadata.executionTime}ms*`;
+          }
         }
 
       } else {
