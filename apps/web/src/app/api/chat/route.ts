@@ -202,7 +202,22 @@ function formatDataForLLM(result: any): string {
     context += '\n';
   }
   
-  // Add specific content if available
+  // Add sections content if available
+  if (data.sections && data.sections.length > 0) {
+    context += 'SEC Filing Content:\n';
+    data.sections.forEach((section: any, index: number) => {
+      context += `\n${section.title}:\n`;
+      // Strip HTML tags and clean up the content
+      const cleanContent = section.content
+        .replace(/<[^>]*>/g, ' ')  // Remove HTML tags
+        .replace(/\s+/g, ' ')      // Normalize whitespace
+        .trim();
+      context += cleanContent.slice(0, 3000) + '\n'; // Limit to 3000 chars per section
+    });
+    context += '\n';
+  }
+  
+  // Add specific content if available (legacy)
   if (data.content) {
     context += 'Filing Content:\n';
     context += data.content + '\n';
