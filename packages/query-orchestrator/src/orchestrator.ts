@@ -376,15 +376,29 @@ export class QueryOrchestrator {
             break;
 
           case 'getFilingSections':
+            // Get accession number from recent filings if not provided
+            let accessionNumber = step.params.accession_number;
+            if (!accessionNumber && results.getRecentFilings) {
+              const filings = results.getRecentFilings;
+              // Find the most recent 10-K or 10-Q filing
+              const relevantFiling = filings.find((f: any) => 
+                f.form === '10-K' || f.form === '10-Q' || f.formType === '10-K' || f.formType === '10-Q'
+              ) || filings[0]; // Fallback to most recent filing
+              
+              if (relevantFiling) {
+                accessionNumber = relevantFiling.accessionNumber || relevantFiling.accession_number;
+              }
+            }
+            
             // Only call if we have the required parameters
-            if (step.params.identifier && step.params.accession_number) {
+            if (step.params.identifier && accessionNumber) {
               result = await this.edgarClient.getFilingSections({
                 identifier: step.params.identifier,
-                accession_number: step.params.accession_number,
+                accession_number: accessionNumber,
                 sections: step.params.sections
               });
               callbacks.onSource({ 
-                type: 'mcp',
+                type: this.edgarClient.getDataSource() === 'MCP' ? 'mcp' : 'sec_api',
                 timestamp: new Date().toISOString()
               });
               // Generate citations for sections
@@ -392,7 +406,12 @@ export class QueryOrchestrator {
                 citations.push(...this.generateCitationsFromSections(result, step.params));
               }
             } else {
-              throw new ExecutionError('getFilingSections requires identifier and accession_number');
+              console.warn('getFilingSections skipped: missing identifier or accession_number', {
+                identifier: step.params.identifier,
+                accessionNumber,
+                hasFilings: !!results.getRecentFilings
+              });
+              result = []; // Return empty array instead of throwing error
             }
             break;
 
