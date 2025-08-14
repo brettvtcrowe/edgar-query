@@ -1,723 +1,335 @@
-# EDGAR Answer Engine - Setup Guide
+# EDGAR Answer Engine - Evidence-First Setup Guide
 
 ## Prerequisites
 
 ### Required Software
 - **Node.js**: v20.0.0 or higher
 - **pnpm**: v8.0.0 or higher (`npm install -g pnpm`)
+- **Wrangler CLI**: Latest version (`npm install -g wrangler`)
 - **Git**: v2.0.0 or higher
-- **VS Code** (recommended) or your preferred IDE
 
 ### Required Accounts
 - **GitHub**: For repository and version control
-- **Vercel**: For hosting and serverless functions
-- **Neon** or **Supabase**: For PostgreSQL with pgvector
-- **Upstash**: For Redis rate limiting
-- **OpenAI** or **Anthropic**: For LLM API access
+- **Vercel**: For Next.js web application hosting
+- **Cloudflare**: For Workers MCP server deployment
+- **OpenAI**: For LLM API access (evidence composition)
+
+### Optional Services
+- **Neon/Supabase**: PostgreSQL for advanced caching (basic functionality works without)
+- **Upstash**: Redis for enhanced rate limiting (fallback available)
+
+## Architecture Overview
+
+The evidence-first EDGAR Answer Engine consists of:
+
+```
+Vercel (Next.js App) ←→ Cloudflare Workers (MCP Server) ←→ SEC APIs
+        ↓                        ↓                         ↓
+   User Interface        Evidence-First Tools        Official Data
+     Chat API           Domain Adapters              SEC Filings
+   Progress Updates     Hash Verification            XBRL Facts
+```
 
 ## Step-by-Step Setup
 
-### Step 1: Clone and Initialize Repository
+### Step 1: Repository Setup
 
 ```bash
-# Clone the repository (or create new)
+# Clone the repository
 git clone https://github.com/yourusername/edgar-query.git
 cd edgar-query
 
-# Initialize if creating new
-git init
-```
-
-### Step 2: Setup Monorepo Structure
-
-```bash
-# Create directory structure
-mkdir -p apps/web
-mkdir -p services/edgar-mcp
-mkdir -p packages/types
-mkdir -p infra/prisma
-mkdir -p infra/scripts
-
-# Initialize pnpm workspace
-cat > pnpm-workspace.yaml << 'EOF'
-packages:
-  - 'apps/*'
-  - 'services/*'
-  - 'packages/*'
-EOF
-
-# Initialize root package.json
-cat > package.json << 'EOF'
-{
-  "name": "edgar-query",
-  "private": true,
-  "scripts": {
-    "dev": "turbo run dev",
-    "build": "turbo run build",
-    "test": "turbo run test",
-    "lint": "turbo run lint",
-    "typecheck": "turbo run typecheck",
-    "db:push": "cd apps/web && pnpm prisma db push",
-    "db:migrate": "cd apps/web && pnpm prisma migrate dev"
-  },
-  "devDependencies": {
-    "turbo": "latest",
-    "@types/node": "^20.0.0",
-    "typescript": "^5.0.0"
-  },
-  "engines": {
-    "node": ">=20.0.0",
-    "pnpm": ">=8.0.0"
-  }
-}
-EOF
-
-# Install root dependencies
+# Install all dependencies
 pnpm install
+
+# Verify installation
+pnpm --version
+node --version
+wrangler --version
 ```
 
-### Step 3: Initialize Next.js Application
+### Step 2: Cloudflare Workers MCP Server
+
+#### 2.1 Create Cloudflare Project
 
 ```bash
-# Create Next.js app
-cd apps/web
-pnpm create next-app@latest . --typescript --tailwind --app --no-src-dir
+# Authenticate with Cloudflare
+wrangler login
 
-# Install additional dependencies
-pnpm add @vercel/blob @upstash/ratelimit @upstash/redis
-pnpm add @prisma/client prisma
-pnpm add ai @ai-sdk/openai
-pnpm add zod cheerio htmlparser2
-pnpm add @faker-js/bm25
-pnpm add -D @types/cheerio
+# Create MCP server project
+mkdir edgar-mcp-server
+cd edgar-mcp-server
 
-# Create app structure
-mkdir -p app/api/chat
-mkdir -p app/api/filings/\[cik\]
-mkdir -p app/api/fetch
-mkdir -p app/api/search
-mkdir -p components/chat
-mkdir -p lib/sectionizers
-mkdir -p lib/rag
-
-# Initialize TypeScript config
-cat > tsconfig.json << 'EOF'
-{
-  "compilerOptions": {
-    "target": "ES2020",
-    "lib": ["dom", "dom.iterable", "esnext"],
-    "allowJs": true,
-    "skipLibCheck": true,
-    "strict": true,
-    "forceConsistentCasingInFileNames": true,
-    "noEmit": true,
-    "esModuleInterop": true,
-    "module": "esnext",
-    "moduleResolution": "bundler",
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "jsx": "preserve",
-    "incremental": true,
-    "plugins": [
-      {
-        "name": "next"
-      }
-    ],
-    "paths": {
-      "@/*": ["./*"]
-    }
-  },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules"]
-}
-EOF
-
-cd ../..
+# Initialize Workers project
+wrangler init edgar-mcp-server
 ```
 
-### Step 4: Setup MCP Server
+#### 2.2 Install MCP Dependencies
 
 ```bash
-# Initialize MCP server
-cd services/edgar-mcp
-pnpm init
+# Install Cloudflare MCP SDK
+npm install @cloudflare/mcp-sdk
+npm install @cloudflare/workers-oauth-provider
 
-# Install MCP dependencies
-pnpm add @modelcontextprotocol/sdk zod
-pnpm add -D @types/node typescript tsx
-
-# Create package.json scripts
-cat > package.json << 'EOF'
-{
-  "name": "@edgar-query/mcp-server",
-  "version": "1.0.0",
-  "type": "module",
-  "scripts": {
-    "dev": "tsx watch src/server.ts",
-    "build": "tsc",
-    "start": "node dist/server.js"
-  },
-  "dependencies": {
-    "@modelcontextprotocol/sdk": "latest",
-    "zod": "^3.0.0"
-  },
-  "devDependencies": {
-    "@types/node": "^20.0.0",
-    "typescript": "^5.0.0",
-    "tsx": "latest"
-  }
-}
-EOF
-
-# Create TypeScript config
-cat > tsconfig.json << 'EOF'
-{
-  "compilerOptions": {
-    "target": "ES2020",
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
-    "lib": ["ES2020"],
-    "outDir": "./dist",
-    "rootDir": "./src",
-    "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "resolveJsonModule": true,
-    "declaration": true,
-    "declarationMap": true
-  },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist"]
-}
-EOF
-
-# Create source directories
-mkdir -p src/tools
-
-cd ../..
+# Install SEC analysis dependencies
+npm install zod node-fetch cheerio crypto
 ```
 
-### Step 5: Setup Shared Types Package
+#### 2.3 Configure Wrangler
 
-```bash
-# Initialize types package
-cd packages/types
-pnpm init
+Create `wrangler.toml`:
+```toml
+name = "edgar-mcp-server"
+main = "src/index.ts"
+compatibility_date = "2024-08-14"
 
-cat > package.json << 'EOF'
-{
-  "name": "@edgar-query/types",
-  "version": "1.0.0",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "scripts": {
-    "build": "tsc",
-    "dev": "tsc --watch"
-  },
-  "dependencies": {
-    "zod": "^3.0.0"
-  },
-  "devDependencies": {
-    "typescript": "^5.0.0"
-  }
-}
-EOF
+[durable_objects]
+bindings = [
+  { name = "EDGAR_EVIDENCE_STORE", class_name = "EdgarEvidenceStore" },
+  { name = "QUERY_SESSION", class_name = "QuerySessionState" }
+]
 
-# Create TypeScript config
-cat > tsconfig.json << 'EOF'
-{
-  "compilerOptions": {
-    "target": "ES2020",
-    "module": "commonjs",
-    "lib": ["ES2020"],
-    "outDir": "./dist",
-    "rootDir": "./src",
-    "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "declaration": true,
-    "declarationMap": true
-  },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist"]
-}
-EOF
+[[migrations]]
+tag = "v1"
+new_classes = ["EdgarEvidenceStore", "QuerySessionState"]
 
-mkdir src
-cd ../..
+[vars]
+SEC_USER_AGENT = "EdgarAnswerEngine/2.0 (evidence-first analysis)"
+HYBRID_SEARCH_TIMEOUT = "15000"
+MAX_CONCURRENT_FETCHES = "10"
+EVIDENCE_VERIFICATION_LEVEL = "FULL"
+
+[env.production.vars]
+OAUTH_CLIENT_ID = "your-oauth-client-id"
+OAUTH_CLIENT_SECRET = "your-oauth-client-secret"
 ```
 
-### Step 6: Configure Turbo
+#### 2.4 Deploy MCP Server
 
 ```bash
-# Create turbo.json in root
-cat > turbo.json << 'EOF'
-{
-  "$schema": "https://turbo.build/schema.json",
-  "globalDependencies": ["**/.env.*local"],
-  "pipeline": {
-    "build": {
-      "dependsOn": ["^build"],
-      "outputs": [".next/**", "!.next/cache/**", "dist/**"]
-    },
-    "dev": {
-      "cache": false,
-      "persistent": true
-    },
-    "test": {
-      "dependsOn": ["build"]
-    },
-    "lint": {},
-    "typecheck": {
-      "dependsOn": ["build"]
-    }
-  }
-}
-EOF
+# Deploy to Cloudflare Workers
+wrangler deploy
+
+# Note the deployment URL (e.g., https://edgar-mcp-server.your-subdomain.workers.dev)
 ```
 
-### Step 7: Setup PostgreSQL Database
+### Step 3: Vercel Web Application
 
-#### Option A: Using Neon
+#### 3.1 Configure Environment Variables
 
-1. Go to [neon.tech](https://neon.tech)
-2. Create a new project
-3. Enable pgvector extension:
-   ```sql
-   CREATE EXTENSION IF NOT EXISTS vector;
-   ```
-4. Copy the connection string
-
-#### Option B: Using Supabase
-
-1. Go to [supabase.com](https://supabase.com)
-2. Create a new project
-3. Go to SQL Editor and run:
-   ```sql
-   CREATE EXTENSION IF NOT EXISTS vector;
-   ```
-4. Copy the connection string from Settings → Database
-
-### Step 8: Setup Prisma
-
+Create `apps/web/.env.local`:
 ```bash
-cd apps/web
+# OpenAI API for LLM composition
+OPENAI_API_KEY="sk-your-openai-api-key-here"
 
-# Initialize Prisma
-pnpm prisma init
+# Cloudflare MCP Server
+EDGAR_MCP_SERVICE_URL="https://edgar-mcp-server.your-subdomain.workers.dev"
+EDGAR_MCP_API_KEY="your-cloudflare-mcp-token"
 
-# Create schema file
-cat > prisma/schema.prisma << 'EOF'
-generator client {
-  provider = "prisma-client-js"
-}
+# SEC Compliance
+SEC_USER_AGENT="EdgarAnswerEngine/2.0 (your-email@example.com)"
 
-datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-}
+# Optional: Database for advanced caching
+# DATABASE_URL="postgresql://user:password@host:5432/edgar_query"
+# REDIS_URL="redis://default:password@host:6379"
 
-model Company {
-  cik           String   @id
-  name          String
-  tickers       String[]
-  lastRefreshed DateTime @default(now())
-  filings       Filing[]
-  
-  @@index([name])
-  @@index([tickers])
-}
+# Vercel Blob Storage (optional)
+# BLOB_READ_WRITE_TOKEN="vercel_blob_token"
 
-model Filing {
-  id         Int       @id @default(autoincrement())
-  cik        String
-  accession  String    @unique
-  form       String
-  filedAt    DateTime
-  primaryUrl String
-  hash       String?
-  company    Company   @relation(fields: [cik], references: [cik])
-  sections   Section[]
-  
-  @@index([cik, filedAt])
-  @@index([form, filedAt])
-}
-
-model Section {
-  id        Int      @id @default(autoincrement())
-  filingId  Int
-  label     String
-  textUrl   String
-  textHash  String
-  charCount Int
-  filing    Filing   @relation(fields: [filingId], references: [id])
-  chunks    Chunk[]
-  
-  @@index([filingId, label])
-}
-
-model Chunk {
-  id        Int      @id @default(autoincrement())
-  sectionId Int
-  start     Int
-  end       Int
-  embedding Unsupported("vector")?
-  section   Section  @relation(fields: [sectionId], references: [id])
-  
-  @@index([sectionId])
-}
-
-model Answer {
-  id        Int      @id @default(autoincrement())
-  prompt    String
-  plan      Json
-  citations Json
-  createdAt DateTime @default(now())
-}
-EOF
-
-cd ../..
-```
-
-### Step 9: Setup Upstash Redis
-
-1. Go to [upstash.com](https://upstash.com)
-2. Create a new Redis database
-3. Select "Global" for region
-4. Copy the REST URL and token
-
-### Step 10: Setup Environment Variables
-
-```bash
-# Create .env.local in apps/web
-cd apps/web
-cat > .env.local << 'EOF'
-# Database
-DATABASE_URL="postgresql://..."
-
-# Redis
-REDIS_URL="https://..."
-REDIS_TOKEN="..."
-
-# Blob Storage
-VERCEL_BLOB_READ_WRITE_TOKEN="..."
-
-# LLM API (choose one)
-OPENAI_API_KEY="sk-..."
-# OR
-ANTHROPIC_API_KEY="sk-ant-..."
-
-# SEC API
-USER_AGENT="EdgarAnswerEngine/1.0 (your-email@example.com)"
-
-# Environment
+# Application Configuration
 NODE_ENV="development"
-EOF
-
-cd ../..
+NEXT_PUBLIC_APP_URL="http://localhost:3000"
 ```
 
-### Step 11: Setup Vercel Project
+#### 3.2 Deploy to Vercel
 
 ```bash
 # Install Vercel CLI
-pnpm add -g vercel
+npm install -g vercel
 
 # Login to Vercel
 vercel login
 
-# Link project
-cd apps/web
-vercel link
+# Deploy application
+vercel --prod
 
-# Configure project settings
-vercel env pull .env.local
-
-cd ../..
+# Set environment variables in Vercel dashboard
+vercel env add OPENAI_API_KEY
+vercel env add EDGAR_MCP_SERVICE_URL
+vercel env add EDGAR_MCP_API_KEY
+vercel env add SEC_USER_AGENT
 ```
 
-### Step 12: Initialize Database
+### Step 4: Local Development
+
+#### 4.1 Start Development Environment
 
 ```bash
-# Push schema to database
-cd apps/web
-pnpm prisma db push
+# Start Cloudflare Workers dev server (in edgar-mcp-server directory)
+wrangler dev
 
-# Generate Prisma client
-pnpm prisma generate
-
-cd ../..
-```
-
-### Step 13: Create Initial Files
-
-#### Health Check Endpoint
-
-```bash
-# Create health check endpoint
-cat > apps/web/app/api/health/route.ts << 'EOF'
-import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-import { Redis } from '@upstash/redis';
-import { put } from '@vercel/blob';
-
-const prisma = new PrismaClient();
-const redis = new Redis({
-  url: process.env.REDIS_URL!,
-  token: process.env.REDIS_TOKEN!,
-});
-
-export async function GET() {
-  const checks = {
-    status: 'ok',
-    db: false,
-    redis: false,
-    blob: false,
-  };
-
-  try {
-    // Check database
-    await prisma.$queryRaw`SELECT 1`;
-    checks.db = true;
-  } catch (error) {
-    console.error('Database check failed:', error);
-  }
-
-  try {
-    // Check Redis
-    await redis.ping();
-    checks.redis = true;
-  } catch (error) {
-    console.error('Redis check failed:', error);
-  }
-
-  try {
-    // Check Blob storage
-    const testBlob = await put('test.txt', 'test', {
-      access: 'public',
-    });
-    if (testBlob) checks.blob = true;
-  } catch (error) {
-    console.error('Blob check failed:', error);
-  }
-
-  const allHealthy = checks.db && checks.redis && checks.blob;
-  
-  return NextResponse.json(checks, {
-    status: allHealthy ? 200 : 503,
-  });
-}
-EOF
-```
-
-#### Basic Homepage
-
-```bash
-cat > apps/web/app/page.tsx << 'EOF'
-export default function Home() {
-  return (
-    <main className="container mx-auto p-8">
-      <h1 className="text-4xl font-bold mb-4">EDGAR Answer Engine</h1>
-      <p className="text-lg text-gray-600">
-        Natural language interface for SEC filings
-      </p>
-      <div className="mt-8">
-        <a
-          href="/api/health"
-          className="text-blue-500 hover:underline"
-        >
-          Check System Health
-        </a>
-      </div>
-    </main>
-  );
-}
-EOF
-```
-
-### Step 14: Test Setup
-
-```bash
-# Install all dependencies
-pnpm install
-
-# Start development server
-cd apps/web
+# Start Next.js development server (in project root)
+cd ../
 pnpm dev
+```
 
-# In another terminal, test health endpoint
+#### 4.2 Verify Setup
+
+```bash
+# Test MCP server health
+curl https://edgar-mcp-server.your-subdomain.workers.dev/health
+
+# Test local application
 curl http://localhost:3000/api/health
 
-# Should return:
-# {"status":"ok","db":true,"redis":true,"blob":true}
+# Test end-to-end query
+curl -X POST http://localhost:3000/api/chat \
+  -H "Content-Type: application/json" \
+  -d '{"messages":[{"role":"user","content":"What was Apple revenue last quarter?"}]}'
 ```
 
-### Step 15: Git Configuration
+## Advanced Configuration
+
+### Database Setup (Optional)
+
+For advanced caching and query optimization:
 
 ```bash
-# Create .gitignore in root
-cat > .gitignore << 'EOF'
-# Dependencies
-node_modules/
-.pnp
-.pnp.js
+# Create PostgreSQL database
+createdb edgar_query
 
-# Testing
-coverage/
-.nyc_output
+# Enable pgvector extension
+psql edgar_query -c "CREATE EXTENSION vector;"
 
-# Next.js
-.next/
-out/
-build/
-dist/
-
-# Production
-*.production
-
-# Misc
-.DS_Store
-*.pem
-
-# Debug
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.pnpm-debug.log*
-
-# Local env files
-.env*.local
-.env
-
-# Vercel
-.vercel
-
-# TypeScript
-*.tsbuildinfo
-next-env.d.ts
-
-# Prisma
-prisma/migrations/
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-EOF
-
-# Initial commit
-git add .
-git commit -m "Initial setup: monorepo structure with Next.js, MCP, and infrastructure"
+# Run Prisma migrations
+cd apps/web
+pnpm prisma db push
+pnpm prisma generate
 ```
 
-## Verification Checklist
+### Redis Setup (Optional)
 
-### Local Development
-- [ ] `pnpm dev` starts without errors
-- [ ] Health check returns all services as `true`
-- [ ] Can access http://localhost:3000
-- [ ] No TypeScript errors
+For enhanced rate limiting and caching:
 
-### Database
-- [ ] Can connect to PostgreSQL
-- [ ] pgvector extension enabled
-- [ ] Prisma schema synced
-- [ ] Can query database
-
-### Redis
-- [ ] Can connect to Upstash Redis
-- [ ] Rate limiting works
-- [ ] No connection errors
-
-### Blob Storage
-- [ ] Can upload test file
-- [ ] Can retrieve test file
-- [ ] URLs are accessible
-
-### Environment
-- [ ] All required env vars set
-- [ ] API keys valid
-- [ ] User-Agent configured
-
-## Common Issues and Solutions
-
-### Issue: Database connection fails
-**Solution**: 
-- Check connection string format
-- Ensure SSL is configured: `?sslmode=require`
-- Verify firewall/IP allowlist
-
-### Issue: Redis rate limit not working
-**Solution**:
-- Verify Redis URL and token
-- Check Upstash dashboard for usage
-- Ensure global database selected
-
-### Issue: TypeScript errors
-**Solution**:
 ```bash
-# Rebuild types
-pnpm run build
+# Local Redis
+brew install redis
+brew services start redis
 
-# Clear cache
-rm -rf .next
-rm -rf node_modules/.cache
+# Or use Upstash cloud Redis
+# Add REDIS_URL to environment variables
 ```
 
-### Issue: Vercel deployment fails
-**Solution**:
-- Check build logs in Vercel dashboard
-- Ensure all env vars are set in Vercel
-- Verify Node.js version compatibility
+### Custom Domain Setup
 
-### Issue: pgvector not working
-**Solution**:
-```sql
--- Run in database console
-CREATE EXTENSION IF NOT EXISTS vector;
+#### Cloudflare Workers Custom Domain
 
--- Verify installation
-SELECT * FROM pg_extension WHERE extname = 'vector';
+1. Go to Cloudflare Dashboard → Workers & Pages
+2. Select your MCP server worker
+3. Go to Settings → Triggers
+4. Add custom domain (e.g., `edgar-mcp.yourdomain.com`)
+
+#### Vercel Custom Domain
+
+1. Go to Vercel Dashboard → Your Project
+2. Go to Settings → Domains
+3. Add custom domain (e.g., `edgar.yourdomain.com`)
+
+## Environment Variables Reference
+
+### Required Variables
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `OPENAI_API_KEY` | OpenAI API key for LLM responses | `sk-proj-...` |
+| `EDGAR_MCP_SERVICE_URL` | Cloudflare Workers MCP server URL | `https://edgar-mcp.workers.dev` |
+| `SEC_USER_AGENT` | SEC-compliant User-Agent string | `EdgarAnswerEngine/2.0 (email@domain.com)` |
+
+### Optional Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `DATABASE_URL` | PostgreSQL connection string | Uses Durable Objects |
+| `REDIS_URL` | Redis connection string | Uses in-memory fallback |
+| `BLOB_READ_WRITE_TOKEN` | Vercel Blob storage token | Uses temp storage |
+| `EDGAR_MCP_API_KEY` | Authentication for MCP server | Optional for development |
+
+## Troubleshooting
+
+### Common Issues
+
+#### MCP Server Connection Failure
+```bash
+# Check MCP server deployment
+wrangler tail edgar-mcp-server
+
+# Verify environment variables
+wrangler secret list
 ```
 
-## Next Steps
+#### SEC API Rate Limiting
+- Verify `SEC_USER_AGENT` is properly set
+- Check Cloudflare Workers logs for rate limit errors
+- Ensure only one query runs at a time during development
 
-After successful setup:
+#### LLM Response Errors
+- Verify `OPENAI_API_KEY` is valid and has credits
+- Check API key permissions and rate limits
+- Monitor token usage in OpenAI dashboard
 
-1. **Start Phase 1 Development**
-   - Follow PROJECT_ROADMAP.md
-   - Use DEVELOPMENT_GUIDE.md for implementation
-   - Check VALIDATION_CHECKLIST.md for acceptance
+#### Citation Verification Failures
+- Check network connectivity to SEC.gov
+- Verify hash calculation consistency
+- Review evidence extraction accuracy
 
-2. **Setup Development Workflow**
-   - Configure your IDE
-   - Setup debugging
-   - Install recommended extensions
+### Performance Optimization
 
-3. **Team Onboarding** (if applicable)
-   - Share repository access
-   - Distribute env variables securely
-   - Assign phase responsibilities
+#### Development Environment
+```bash
+# Use local caching
+export NODE_ENV="development"
+export ENABLE_LOCAL_CACHE="true"
 
-## Support Resources
+# Increase timeout for complex queries
+export QUERY_TIMEOUT="30000"
+```
 
-- **Next.js Documentation**: https://nextjs.org/docs
-- **Vercel Documentation**: https://vercel.com/docs
-- **Prisma Documentation**: https://www.prisma.io/docs
-- **MCP SDK**: https://github.com/modelcontextprotocol/sdk
-- **Upstash Documentation**: https://docs.upstash.com
+#### Production Environment
+```bash
+# Enable all optimizations
+export NODE_ENV="production"
+export ENABLE_EVIDENCE_CACHE="true"
+export ENABLE_QUERY_OPTIMIZATION="true"
+```
 
-## Security Reminders
+## Health Checks
 
-1. **Never commit** `.env.local` or any file with secrets
-2. **Rotate API keys** regularly
-3. **Use environment variables** for all sensitive data
-4. **Enable 2FA** on all service accounts
-5. **Review dependencies** for vulnerabilities regularly
+### System Health Verification
 
----
+```bash
+# Check all systems
+curl https://your-app.vercel.app/api/health
 
-*Setup complete! You're ready to begin development. Follow the PROJECT_ROADMAP.md for the next phase.*
+# Expected response:
+{
+  "status": "ok",
+  "services": {
+    "mcp": true,
+    "sec_api": true,
+    "llm": true
+  },
+  "evidence_verification": "enabled",
+  "version": "2.0.0"
+}
+```
+
+### Performance Monitoring
+
+```bash
+# Test query performance
+time curl -X POST https://your-app.vercel.app/api/chat \
+  -H "Content-Type: application/json" \
+  -d '{"messages":[{"role":"user","content":"Test query"}]}'
+```
+
+This setup provides a complete evidence-first EDGAR analysis platform with institutional-grade accuracy, verifiable citations, and comprehensive domain expertise.

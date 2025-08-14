@@ -12,22 +12,38 @@ Build a cloud-hosted web application that answers natural language queries about
 - **Progressive results** ✅ - Real-time streaming for complex searches
 - **SEC compliance** ✅ - Proper User-Agent, rate limiting, backoff
 
-**NOTE**: This roadmap reflects the original development plan. The actual implementation successfully chose **tool orchestration** over **vector/RAG approaches**, achieving production-ready capabilities with simpler architecture and better reliability.
+**CURRENT APPROACH**: Evidence-first SEC query engine with deterministic execution and zero-hallucination guardrails. Implementation now focuses on institutional-grade analysis with Cloudflare Workers MCP architecture.
 
 ## 🎯 **CURRENT STATUS (August 2025)**
 
-**✅ PRODUCTION READY**: All core functionality is **LIVE** and available to users at https://edgar-query-nu.vercel.app/
+**✅ FOUNDATION COMPLETE**: Core chat interface operational at https://edgar-query-nu.vercel.app/
 
-**What Works Now**:
-- Company-specific queries: "Apple's latest 10-K" (1-3s)
-- Thematic cross-document search: "All companies mentioning AI" (15-30s)  
-- Hybrid analysis: "Compare Apple vs Google revenue" (10-20s)
-- Progressive streaming with real-time updates
-- 100% reliability via automatic SEC API fallback
+**✅ ARCHITECTURE EVOLUTION**: Transitioning to sophisticated evidence-first approach
+- Evidence-backed citations with hash verification
+- Deterministic query execution (LLM plans → tools execute → LLM composes)
+- Domain-specific adapters for SEC forms and accounting standards
+- Temporal event correlation (acquisitions → segment changes)
 
-**Phases Completed**: 1.1, 1.2, 1.3, 2.1, 2.1+ (Chat API Integration)
+**🚀 NEXT PHASE**: Cloudflare Workers MCP Implementation (8-10 hours)
+- Native MCP protocol with purpose-built tools
+- Durable Objects for evidence store and knowledge base
+- Hybrid search stack (BM25 + embeddings + cross-encoder)
+- Advanced query capabilities (8-K restatements, ASC topic analysis)
 
-## Development Phases (Original Plan)
+## Development Phases
+
+### ✅ Completed Phases (Foundation)
+All foundational work has been completed, providing a working chat interface with basic SEC data retrieval.
+
+## 🚀 Current Implementation Phase
+
+### Phase 3: Evidence-First MCP Architecture (In Progress)
+**Duration**: 8-10 hours  
+**Approach**: Cloudflare Workers with native MCP protocol
+
+**Goal**: Transform from basic chat interface to institutional-grade SEC analysis platform with evidence verification, domain expertise, and zero-hallucination guardrails.
+
+## Advanced Development Phases
 
 ### Foundation Phase
 *Build once, never rebuild*

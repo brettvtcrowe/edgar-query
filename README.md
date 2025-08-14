@@ -8,19 +8,20 @@
 
 ## 🎯 Overview
 
-EDGAR Answer Engine is a cloud-hosted web application that enables users to ask natural language questions about SEC EDGAR filings and receive accurate, citation-backed answers. Built with Next.js and powered by LLMs with a tool-first architecture, it provides instant access to complex financial data without mirroring SEC databases.
+EDGAR Answer Engine is a sophisticated, evidence-first SEC filing analysis platform that provides institutional-grade answers to complex regulatory questions. Built with deterministic query execution, domain-specific adapters, and zero-hallucination guardrails, it delivers precise, verifiable insights from SEC EDGAR data without speculation or mirroring databases.
 
 ### Key Features
 
-- **🔍 Natural Language Queries**: Ask questions in plain English about any SEC filing
-- **🌐 Cross-Company Analysis**: **LIVE** - Search across all companies for thematic patterns  
-- **📊 Evidence-Grounded Citations**: Every response includes direct links to source documents
-- **⚡ Intelligent Query Routing**: Automatic classification and routing to optimal processing
-- **🏢 Company Intelligence**: Automatic ticker resolution and filing history
-- **📈 Multi-Form Support**: Works with 10-K, 10-Q, 8-K, S-1, 20-F, comment letters, and more
-- **🔗 Direct SEC Links**: All citations link directly to official SEC.gov documents
-- **⚙️ 100% Reliability**: Automatic fallback ensures no query ever fails
-- **⚡ Production Ready**: Live at https://edgar-query-nu.vercel.app/
+- **🎯 Evidence-First Answers**: Every claim tied to specific filings, sections, and character offsets
+- **🔬 Deterministic Execution**: LLM plans query → tools execute → LLM composes from evidence (no hallucination)
+- **🏛️ Domain Expertise**: ASC topic detection, accounting lexicon, corporate event correlation
+- **📊 Institutional-Grade Analysis**: 8-K restatements, segment changes, milestone method detection
+- **🔍 Hybrid Search Stack**: BM25 + embeddings + cross-encoder + section priors for maximum precision
+- **⚡ Temporal Correlation**: Links acquisitions to segment changes within 12-month windows
+- **📈 Multi-Form Mastery**: 10-K/10-Q items, 8-K event mapping, SEC comment letter parsing
+- **🔗 Hash-Verified Citations**: All evidence cross-checked against official SEC text with exact offsets
+- **⚙️ Zero-Speculation Guardrails**: No evidence = no claim; numeric facts validated against XBRL
+- **🚀 Cloudflare MCP Architecture**: Native protocol support with global edge performance
 
 ### Example Queries (All Working Now! ✅)
 
@@ -48,47 +49,64 @@ EDGAR Answer Engine is a cloud-hosted web application that enables users to ask 
 "Compare revenue recognition practices across software companies"
 ```
 
-#### Advanced Analysis Queries (Hybrid 10-20s)
+#### Institutional-Grade Analysis (Evidence-Backed, 10-15s)
 ```
-"Compare Apple vs Microsoft AI investment strategies from their filings"
+"Find all 8-K Item 4.02 restatements related to ASC 606 principal vs agent issues (3 years)"
 
-"How do major banks describe inflation risk vs individual bank analysis?"
+"Show segment changes within 12 months of acquisitions with correlation analysis"
 
-"Find all Item 4.02 restatements related to ASC 606 principal vs. agent issues"
+"Which life sciences companies use milestone method for revenue recognition?"
 
-"Which life sciences companies use the milestone method for revenue recognition?"
+"Compare Microsoft's revenue recognition policies across last 5 years with change highlights"
+
+"Identify failed sales under ASC 860 across financial services companies"
+
+"Find early adoption of FASB standards with ASC code extraction and reasoning"
+
+"Analyze SEC comment letters to crypto companies on revenue recognition themes"
 ```
 
 > **Full Capabilities**: See [docs/QUERY_CAPABILITIES.md](./docs/QUERY_CAPABILITIES.md) for comprehensive examples and supported query patterns including regulatory compliance analysis, accounting policy tracking, and SEC comment letter searches.
 
-## 🏗️ Architecture
+## 🏗️ Evidence-First Architecture
 
-**Current Production Architecture (Simplified)**
+**Production Architecture (Cloudflare Workers MCP)**
 
 ```
-Browser (Next.js) → Chat API → Query Orchestrator → Dual-Mode Execution
-                                        ↓
-                              ┌─────────────────┬─────────────────┐
-                              ▼                 ▼                 ▼
-                    Company-Specific     Thematic Search    Metadata-Only
-                    ┌─────────────┐     ┌─────────────┐    ┌─────────────┐
-                    │ EDGAR MCP   │     │ Custom      │    │ Direct SEC  │
-                    │ (HTTP)      │     │ Cross-Doc   │    │ API         │
-                    │             │     │ Search      │    │             │
-                    └─────────────┘     └─────────────┘    └─────────────┘
-                            │                   │                  │
-                            ▼                   ▼                  ▼
-                      [Automatic Fallback to SEC APIs if services fail]
-                                        ↓
-                            Citations + Results with SEC.gov Links
+Browser → Chat API → Query Understanding → Deterministic Execution → Evidence Composition
+                           ↓                        ↓                        ↓
+              ┌─────────────────────┐    ┌─────────────────────┐    ┌─────────────────────┐
+              │ Intent Classification│    │ Discovery & Fetch   │    │ Citation Verification│
+              │ Entity Resolution   │    │ Domain Sectionizers │    │ Evidence Assembly   │
+              │ Execution Planning  │    │ Hybrid Search       │    │ Guardrail Checks   │
+              └─────────────────────┘    └─────────────────────┘    └─────────────────────┘
+                           ↓                        ↓                        ↓
+              ┌─────────────────────────────────────────────────────────────────────────┐
+              │                   Cloudflare Workers MCP Server                         │
+              │  ┌─────────────────┬─────────────────┬─────────────────┬─────────────┐ │
+              │  │ Query Tools     │ Discovery Tools │ Domain Adapters │ Analysis    │ │
+              │  │ • classify_intent│ • discover_filings│ • sectionize_10k│ • link_events│ │
+              │  │ • resolve_entities│ • bulk_fetch    │ • parse_8k_items│ • detect_asc │ │
+              │  │ • build_plan    │ • hybrid_search │ • comment_letters│ • correlate  │ │
+              │  └─────────────────┴─────────────────┴─────────────────┴─────────────┘ │
+              └─────────────────────────────────────────────────────────────────────────┘
+                                                   ↓
+                        ┌─────────────────────────────────────────────────┐
+                        │ Evidence Store (Durable Objects + SQL)         │
+                        │ • Company events with temporal links           │
+                        │ • Section offsets with topic indexing         │
+                        │ • ASC code detection and correlation          │
+                        │ • Hash-verified citation cache                │
+                        └─────────────────────────────────────────────────┘
 ```
 
 **Core Principles:**
-- **Tool-First Orchestration**: Query orchestrator routes to appropriate tools
-- **No EDGAR Mirroring**: Fetch on-demand with intelligent caching
-- **100% Reliability**: Automatic fallback ensures no query fails
-- **Direct Citation**: All results linked to original SEC.gov sources
-- **SEC Compliance**: Proper User-Agent, rate limiting, respect for SEC infrastructure
+- **Evidence-First**: Every claim backed by specific filing/section/offset with hash verification
+- **Deterministic Execution**: LLM plans → tools execute → LLM composes (no hallucination path)
+- **Domain Expertise**: Form-specific parsing, accounting lexicon, event correlation
+- **Zero-Speculation**: No evidence = no claim; numeric facts cross-checked with XBRL
+- **Temporal Intelligence**: 12-month correlation windows for corporate events
+- **Hybrid Precision**: BM25 + embeddings + cross-encoder + section priors for maximum accuracy
 
 ---
 

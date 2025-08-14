@@ -1,724 +1,374 @@
-# EDGAR Answer Engine - Architecture Reference
+# EDGAR Answer Engine - Evidence-First Architecture Reference
 
 ## System Architecture Overview
 
-**Production Architecture (Current Implementation - August 2025)**
+**Evidence-First SEC Query Engine (Cloudflare Workers MCP)**
 
+The EDGAR Answer Engine implements a sophisticated, institutional-grade architecture designed around evidence-first principles, deterministic execution, and zero-hallucination guardrails. Built on Cloudflare Workers with native MCP protocol support, it provides verifiable, citation-backed answers to complex regulatory questions.
+
+## 🎯 Core Architecture Principles
+
+### Evidence-First Design
+- **Every claim backed by evidence**: Specific filing, section, character offset, and hash verification
+- **No speculation allowed**: No evidence = no claim; system refuses to generate unsupported statements
+- **Hash-verified citations**: All evidence cross-checked against official SEC text
+- **Numeric cross-validation**: Financial data verified against XBRL facts with narrative corroboration
+
+### Deterministic Query Execution
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    Vercel Deployment                        │
-│                Next.js App with Chat API                    │
-└─────────────────┬───────────────────────────────────────────┘
-                  │
-┌─────────────────▼───────────────────────────────────────────┐
-│              /api/chat Endpoint (LIVE)                      │
-│           Query Orchestrator Integration                    │
-│        ✅ All query patterns operational                    │
-└─────────────────┬───────────────────────────────────────────┘
-                  │
-┌─────────────────▼───────────────────────────────────────────┐
-│          Query Classification & Routing (LIVE)              │
-│  ┌─────────────────────────────────────────────────────┐   │
-│  │ Pattern Detection │ Entity Resolver │ Route Planner  │   │
-│  │    95% accuracy   │ 60+ SEC terms   │ 4 patterns     │   │
-│  └─────────────────────────────────────────────────────┘   │
-└─────┬─────────────────────┬─────────────────────┬──────────┘
-      │ Company (1-3s)      │ Thematic (15-30s)  │ Metadata (1s)
-      ▼                     ▼                     ▼
-┌─────────────────┐   ┌─────────────────┐   ┌─────────────────┐
-│ EDGAR MCP       │   │ Thematic Search │   │ Direct SEC API  │
-│ HTTP Service    │   │ Package (NEW)   │   │ Fallback        │
-│ ✅ Railway      │   │ ✅ BM25 Search  │   │ ✅ Rate Limited │
-└─────┬───────────┘   └─────┬───────────┘   └─────┬───────────┘
-      │                     │                     │
-      ▼                     ▼                     ▼
-┌─────────────────┐   ┌─────────────────┐   ┌─────────────────┐
-│ 21 MCP Tools    │   │ Cross-Document  │   │ SEC API Direct  │
-│ via HTTP Bridge │   │ Text Search     │   │ (Always Works)  │
-│ + SEC Fallback  │   │ + Progressive   │   │                 │
-└─────────────────┘   └─────────────────┘   └─────────────────┘
-                  │
-┌─────────────────▼───────────────────────────────────────────┐
-│                  Result Processing (LIVE)                   │
-│  ┌─────────────────────────────────────────────────────┐   │
-│  │ Citation Generator │ Progress Updates │ Aggregation  │   │
-│  │ SEC.gov links     │ Real-time       │ Clustering   │   │
-│  └─────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────┘
+Natural Language Query → LLM Plans Execution → Tools Execute Deterministically → LLM Composes from Evidence
 ```
+- **LLM Role 1**: Query understanding and execution plan generation
+- **Tool Execution**: Deterministic, programmatic evidence gathering
+- **LLM Role 2**: Evidence composition into natural language (no speculation)
 
-**Current Architecture (Production Ready)**: 
-- ✅ **TOOL-FIRST ORCHESTRATION**: Direct API calls via EDGAR MCP tools
-- ✅ **ON-DEMAND PROCESSING**: No content storage, fetch and process in real-time
-- ✅ **BM25 TEXT SEARCH**: Simple, fast, and effective for cross-document queries
+### Domain Expertise Integration
+- **Form-specific sectionizers**: 10-K items, 8-K event mapping, comment letter parsing
+- **Accounting lexicon**: ASC topic detection, revenue recognition patterns, restatement identification
+- **Corporate event correlation**: Temporal linking of acquisitions to segment changes
+- **Industry classification**: Life sciences, crypto, financial services domain knowledge
 
-## Core Components
+## 🏗️ System Components
 
-### 1. Query Classification System
+### 1. Query Understanding Layer
 
-The system classifies queries into four types:
-
-| Query Type | Description | Example | Primary Tools |
-|------------|-------------|---------|---------------|
-| **Company-Specific** | Single company queries | "Apple's latest 10-K" | EDGAR MCP tools |
-| **Thematic** | Cross-company searches | "All companies mentioning AI" | Thematic search package |
-| **Hybrid** | Multi-company comparisons | "Compare Apple vs Microsoft revenue" | Both systems |
-| **Metadata** | Filing metadata only | "Count of 8-Ks filed today" | Direct SEC API |
-
-### 2. EDGAR Database Capabilities
-
-The EDGAR database contains extensive filing types beyond standard forms:
-
-| Filing Category | Form Types | Description | Query Support |
-|-----------------|------------|-------------|---------------|
-| **Core Filings** | 10-K, 10-Q, 8-K, S-1, 20-F | Standard SEC filings | Full support via EDGAR MCP |
-| **Comment Letters** | UPLOAD, CORRESP | SEC review correspondence | Searchable via thematic tools |
-| **Proxy Statements** | DEF 14A, DEFM14A | Shareholder voting materials | Content extraction supported |
-| **Insider Trading** | Forms 3, 4, 5 | Ownership changes | EDGAR MCP insider tools |
-| **Registration** | S-1, S-3, S-4 | Securities registration | Full text search capable |
-| **Foreign Filers** | 20-F, 6-K | International company filings | Standard processing |
-
-**Key Insight**: SEC comment letters (UPLOAD) and company responses (CORRESP) are fully accessible in EDGAR, released 20+ business days after review completion. This enables regulatory compliance analysis across industries.
-
-### 3. Current vs Original Architecture
-
-**IMPORTANT**: The system architecture evolved significantly during development. The current implementation prioritizes **tool-first orchestration** over the originally planned RAG pipeline approach.
-
-#### What Was Originally Planned (Decided Against):
-- ❌ Vector embeddings and semantic search (unnecessary complexity)
-- ❌ Content preprocessing and storage (on-demand is faster and simpler)
-- ❌ Advanced chunking (BM25 search works well on full sections)
-- ❌ RAG pipeline (direct tool responses are more accurate)
-
-#### What Was Actually Built (Production Ready):
-- ✅ Query classification and intelligent routing (95% accuracy)
-- ✅ Direct tool orchestration with EDGAR MCP integration
-- ✅ Thematic search with BM25 text search across documents  
-- ✅ Progressive streaming with real-time progress updates
-- ✅ 100% reliability through automatic SEC API fallback
-- ✅ Direct citation generation with SEC.gov links
-
-**Why Tool-First Architecture Is Superior:**
-- **Simpler & More Reliable**: Direct API calls with automatic fallback
-- **SEC Compliant**: Respects SEC infrastructure, no data mirroring
-- **Accurate Citations**: Direct links to original documents
-- **Lower Maintenance**: No complex indexing, embeddings, or storage pipeline
-- **Real-time Data**: Always fetches latest filings without sync delays
-
-### 3. Data Flow (Current Implementation)
-
-```mermaid
-sequenceDiagram
-    participant User
-    participant Chat API
-    participant LLM
-    participant MCP Tools
-    participant SEC API
-    participant Storage
-
-    User->>Chat API: Natural language query
-    Chat API->>LLM: Classify & plan query
-    LLM->>Chat API: Query plan with tool calls
-    
-    loop For each tool call
-        Chat API->>MCP Tools: Execute tool
-        MCP Tools->>SEC API: Fetch data (with rate limit)
-        SEC API->>MCP Tools: Return data
-        MCP Tools->>Storage: Cache if needed
-        MCP Tools->>Chat API: Tool result
-    end
-    
-    Chat API->>LLM: Generate answer from evidence
-    LLM->>Chat API: Answer with citations
-    Chat API->>User: Stream response
-```
-
-### 3. SEC Data Sources
-
-#### Official Endpoints
-
-| Endpoint | URL Pattern | Purpose | Rate Limit |
-|----------|-------------|---------|------------|
-| **Submissions** | `data.sec.gov/submissions/CIK{10-digit}.json` | Company filing history | 10 req/sec |
-| **Company Facts** | `data.sec.gov/api/xbrl/companyfacts/CIK{10-digit}.json` | All XBRL facts for company | 10 req/sec |
-| **Frames** | `data.sec.gov/api/xbrl/frames/{taxonomy}/{tag}/{unit}/{period}.json` | Cross-company metrics | 10 req/sec |
-| **Archives** | `www.sec.gov/Archives/edgar/data/{cik}/{accession}/{document}` | Actual filing documents | 10 req/sec |
-| **Indexes** | `www.sec.gov/Archives/edgar/daily-index/` | Daily filing lists | 10 req/sec |
-| **Ticker Mapping** | `www.sec.gov/files/company_tickers.json` | Ticker to CIK mapping | Daily refresh |
-
-#### Data Formats
-
-- **HTML**: Primary format for newer filings (2000+)
-- **TXT**: Plain text format, available for all filings
-- **XML/XBRL**: Structured data for financial statements
-- **PDF**: Exhibits and older documents (OCR out of scope)
-
-### 4. Query Orchestration & Thematic Search
-
-#### Query Classification System
-
+#### Intent Classification Engine
 ```typescript
 interface QueryClassification {
-  pattern: 'COMPANY_SPECIFIC' | 'THEMATIC' | 'HYBRID' | 'METADATA_ONLY';
+  pattern: 'COMPANY_SPECIFIC' | 'THEMATIC' | 'CORRELATION' | 'TEMPORAL' | 'NUMERIC';
   confidence: number;
   entities: {
-    companies?: string[];
-    tickers?: string[];
-    forms?: string[];
-    timeRanges?: string[];
-    topics?: string[];
+    companies: ResolvedCompany[];
+    timeWindows: TemporalRange[];
+    forms: SECFormType[];
+    ascTopics: AccountingStandard[];
+    events: CorporateEventType[];
   }
 }
 ```
 
-#### Routing Strategy
+#### Entity Resolution System
+- **Company Resolution**: Ticker → CIK mapping with fuzzy matching and alias handling
+- **Temporal Parsing**: "past 3 years", "within 12 months", "Q3 2024" → precise date ranges
+- **ASC Topic Detection**: "revenue recognition", "principal vs agent" → ASC 606 classification
+- **Event Classification**: "acquisition", "restatement", "segment change" → structured event types
 
-| Pattern | Primary System | Fallback | Example Query |
-|---------|---------------|----------|---------------|
-| COMPANY_SPECIFIC | EDGAR MCP via HTTP | Direct SEC API | "Apple's latest 10-K" |
-| THEMATIC | Thematic Search Package | EDGAR MCP bulk | "All companies mentioning AI" |
-| HYBRID | Parallel execution | Sequential fallback | "Compare Apple and Microsoft revenues" |
-| METADATA_ONLY | Direct SEC API | EDGAR MCP | "Count of 8-Ks filed today" |
-
-#### Thematic Search Architecture
-
+#### Execution Plan Builder
 ```typescript
-// Bulk Filing Discovery
-interface BulkDiscoveryParams {
-  formTypes?: FormType[];
-  dateRange?: { start: string; end: string };
-  industries?: Industry[];
-  companies?: string[];
-  maxResults?: number;
-  sortBy?: 'filed-date' | 'company' | 'relevance';
+interface ExecutionPlan {
+  steps: ExecutionStep[];
+  parallelizable: boolean[];
+  expectedDuration: number;
+  fallbackStrategies: string[];
 }
 
-// Cross-Document Search  
-interface CrossSearchParams {
-  filings: DiscoveredFiling[];
-  query: string;
-  sections?: SectionType[];
-  maxResults?: number;
-  minScore?: number;
-  includeSnippets?: boolean;
+interface ExecutionStep {
+  tool: string;
+  parameters: Record<string, any>;
+  outputSchema: ZodSchema;
+  dependencies: string[];
 }
 ```
 
-#### BM25 Scoring Implementation
+### 2. Cloudflare Workers MCP Server
 
+#### Native MCP Implementation
 ```typescript
-// Simplified BM25 formula
-score = Σ(IDF(qi) * (f(qi, D) * (k1 + 1)) / (f(qi, D) + k1 * (1 - b + b * (|D| / avgdl))))
+export class EdgarMcpAgent extends McpAgent {
+  server = new McpServer({
+    name: "EDGAR Evidence-First Engine",
+    version: "2.0.0",
+    description: "Institutional-grade SEC filing analysis with evidence verification"
+  });
 
-where:
-- k1 = 1.2 (term saturation)
-- b = 0.75 (length normalization)
-- IDF = inverse document frequency
-- f(qi, D) = term frequency in document
-- |D| = document length
-- avgdl = average document length
-```
-
-#### Progressive Streaming
-
-```typescript
-interface ProgressUpdate {
-  operation: 'discovery' | 'content-fetch' | 'search' | 'aggregation';
-  completed: number;
-  total: number;
-  currentItem?: string;
-  estimatedTimeRemaining?: number;
-}
-```
-
-### 5. Sectionizer Patterns
-
-#### 10-K/10-Q Sections
-
-| Item | Section Label | Pattern |
-|------|---------------|---------|
-| 1 | Business | `Item\s+1\.?\s+Business` |
-| 1A | Risk Factors | `Item\s+1A\.?\s+Risk\s+Factors` |
-| 2 | Properties | `Item\s+2\.?\s+Properties` |
-| 3 | Legal Proceedings | `Item\s+3\.?\s+Legal\s+Proceedings` |
-| 7 | MD&A | `Item\s+7\.?\s+Management['']s\s+Discussion` |
-| 7A | Market Risk | `Item\s+7A\.?\s+Quantitative.*Market\s+Risk` |
-| 8 | Financial Statements | `Item\s+8\.?\s+Financial\s+Statements` |
-| 9A | Controls | `Item\s+9A\.?\s+Controls\s+and\s+Procedures` |
-
-#### 8-K Event Items
-
-| Item | Event Type | Importance |
-|------|------------|------------|
-| 1.01 | Entry into Material Agreement | High |
-| 2.02 | Results of Operations | High |
-| 4.01 | Changes in Accountant | Critical |
-| 4.02 | Non-Reliance on Financial Statements | Critical |
-| 5.02 | Officer Departure/Appointment | Medium |
-| 7.01 | Regulation FD Disclosure | Low |
-| 8.01 | Other Events | Variable |
-
-### 5. Search & Ranking Algorithm
-
-#### Hybrid Scoring Formula
-
-```
-final_score = α * bm25_score + β * vector_score + γ * section_boost
-
-where:
-- α = 0.4 (keyword weight)
-- β = 0.4 (semantic weight)  
-- γ = 0.2 (section relevance weight)
-```
-
-#### Section Boost Factors
-
-| Query Topic | Boosted Sections | Boost Factor |
-|-------------|------------------|--------------|
-| Financial metrics | Financial Statements, Notes | 2.0x |
-| Risk-related | Risk Factors, Legal Proceedings | 1.8x |
-| Business operations | MD&A, Business | 1.5x |
-| Governance | Controls, Governance | 1.5x |
-| Forward-looking | MD&A, Risk Factors | 1.3x |
-
-### 6. RAG Pipeline
-
-#### Chunking Strategy
-
-```typescript
-interface ChunkingParams {
-  chunkSize: 1500,        // Target chunk size in characters
-  overlap: 200,           // Overlap between chunks
-  sentenceBoundary: true, // Try to break at sentences
-  maxChunkSize: 2000,     // Hard limit
-  minChunkSize: 500,      // Minimum viable chunk
-}
-```
-
-#### Evidence Selection
-
-1. **Initial Retrieval**: Top 100 chunks by hybrid score
-2. **Re-ranking**: Apply cross-encoder model
-3. **Diversity**: Ensure multiple sections represented
-4. **Final Selection**: Top 5-10 chunks with offsets
-
-#### Citation Format
-
-```typescript
-interface Citation {
-  filingUrl: string;      // SEC archive URL
-  accession: string;      // Filing identifier
-  form: string;           // Form type
-  filedAt: string;        // Filing date
-  section: string;        // Section label
-  startChar: number;      // Character offset start
-  endChar: number;        // Character offset end
-  snippet: string;        // Quoted text
-}
-```
-
-### 7. Database Schema Details
-
-#### Table Relationships
-
-```mermaid
-erDiagram
-    Company ||--o{ Filing : has
-    Filing ||--o{ Section : contains
-    Section ||--o{ Chunk : divided_into
+  async init() {
+    // Query understanding tools
+    this.registerQueryTools();
     
-    Company {
-        string cik PK
-        string name
-        string[] tickers
-        datetime lastRefreshed
-    }
+    // Discovery and retrieval
+    this.registerDiscoveryTools();
     
-    Filing {
-        int id PK
-        string cik FK
-        string accession UK
-        string form
-        datetime filedAt
-        string primaryUrl
-        string hash
-    }
+    // Domain-specific adapters
+    this.registerDomainTools();
     
-    Section {
-        int id PK
-        int filingId FK
-        string label
-        string textUrl
-        string textHash
-        int charCount
-    }
-    
-    Chunk {
-        int id PK
-        int sectionId FK
-        int start
-        int end
-        vector embedding
-    }
-```
-
-#### Indexes
-
-- `companies`: `(name)`, `(tickers)` - Fast company lookup
-- `filings`: `(cik, filedAt)`, `(form, filedAt)` - Date range queries
-- `sections`: `(filingId, label)` - Section retrieval
-- `chunks`: `(sectionId)`, `embedding` - Vector similarity search
-
-### 8. API Contracts
-
-#### POST /api/chat
-
-**Request:**
-```typescript
-{
-  messages: Array<{
-    role: 'user' | 'assistant' | 'system';
-    content: string;
-  }>;
-  stream?: boolean;
+    // Analysis and correlation
+    this.registerAnalysisTools();
+  }
 }
 ```
 
-**Response (Streaming):**
+#### Tool Categories
+
+**Query Understanding Tools**:
+- `classify_intent` - Intent classification with confidence scoring
+- `resolve_entities` - Company, time, form, topic entity extraction
+- `build_execution_plan` - DSL compilation from natural language
+- `validate_plan` - Feasibility and resource estimation
+
+**Discovery & Retrieval Tools**:
+- `discover_filings` - Structured metadata filters (form, date, industry, items)
+- `bulk_fetch_sections` - Parallel fetching with SEC rate limit coordination
+- `hybrid_search` - BM25 + embeddings + cross-encoder with section priors
+- `verify_citations` - Hash verification against official SEC text
+
+**Domain-Specific Adapters**:
+- `sectionize_10k` - Items 1, 1A, 7, 7A, 8, 9A with accounting policy extraction
+- `sectionize_8k` - Event mapping (2.01, 4.02, 5.02) with structured data extraction
+- `parse_comment_letters` - UPLOAD/CORRESP thread parsing with Q&A identification
+- `detect_accounting_events` - ASC 606/860, milestone method, early adoption detection
+- `extract_numeric_facts` - XBRL-first extraction with narrative validation
+
+**Correlation & Analysis Tools**:
+- `link_temporal_events` - Acquisition → segment change correlation within time windows
+- `detect_restatements` - 8-K Item 4.02 identification with reason extraction
+- `track_policy_changes` - Multi-year accounting policy comparison with diff analysis
+- `analyze_failed_sales` - ASC 860 factoring arrangement identification
+- `milestone_method_finder` - Life sciences revenue recognition pattern detection
+
+### 3. Evidence Store (Durable Objects)
+
+#### Persistent State Management
 ```typescript
-// JSONLines format
-{"type": "tool_call", "name": "resolve_company", "arguments": {...}}
-{"type": "tool_result", "name": "resolve_company", "result": {...}}
-{"type": "content", "text": "Based on the analysis..."}
-{"type": "citation", "data": {...}}
-{"type": "done"}
-```
+export class EdgarEvidenceStore extends DurableObject {
+  private storage: DurableObjectStorage;
+  private sql: SqlStorage;
 
-#### GET /api/filings/[cik]
-
-**Query Parameters:**
-- `limit`: Number of filings (default: 10)
-- `forms`: Comma-separated form types
-- `since`: ISO date string
-- `until`: ISO date string
-
-**Response:**
-```typescript
-{
-  company: {
+  // Company events with temporal correlation
+  async storeCompanyEvent(event: {
+    type: CorporateEventType;
     cik: string;
-    name: string;
-    tickers: string[];
-  };
-  filings: Array<{
-    accession: string;
-    form: string;
-    filedAt: string;
-    primaryUrl: string;
-    size: number;
-  }>;
+    filingAccession: string;
+    eventDate: string;
+    description: string;
+    relatedEvents: RelatedEvent[];
+    confidence: number;
+  }): Promise<void>;
+
+  // Section storage with precise offsets
+  async storeSectionWithOffsets(section: {
+    filingAccession: string;
+    sectionType: SectionType;
+    startOffset: number;
+    endOffset: number;
+    textHash: string;
+    topics: ASCTopic[];
+    extractedData: StructuredData;
+  }): Promise<void>;
+
+  // Accounting topic indexing
+  async indexAccountingTopic(topic: {
+    ascCode: string;
+    keywords: string[];
+    negativePatterns: string[];
+    typicalSections: SectionType[];
+    industrySpecific: boolean;
+  }): Promise<void>;
 }
 ```
 
-### 9. Performance Specifications
+#### Knowledge Base Structure
+- **Company Events**: Acquisitions, restatements, leadership changes with temporal links
+- **Section Index**: Text offsets, topic classifications, structured data extraction
+- **ASC Topic Library**: Accounting standard patterns, keywords, negative filters
+- **Citation Cache**: Hash-verified text snippets with official SEC URLs
+- **Correlation Graph**: Event relationships within temporal windows
 
-#### Latency Targets
+### 4. Hybrid Search Stack
 
-| Operation | P50 | P95 | P99 |
-|-----------|-----|-----|-----|
-| Company resolution | 100ms | 300ms | 500ms |
-| List filings | 200ms | 500ms | 1s |
-| Fetch filing | 500ms | 2s | 5s |
-| Section extraction | 100ms | 300ms | 500ms |
-| Text search (per filing) | 200ms | 500ms | 1s |
-| Full query (simple) | 2s | 5s | 10s |
-| Full query (complex) | 5s | 15s | 30s |
+#### Multi-Stage Retrieval Pipeline
+1. **Structured Filtering**: Form type, date range, company, industry, SEC items
+2. **BM25 Text Search**: Keyword relevance with domain-specific term weighting
+3. **Semantic Embeddings**: Dense vector similarity for conceptual matching
+4. **Cross-Encoder Re-ranking**: Final precision ranking of top-200 candidates
+5. **Section Priors**: Boost based on query type (risk → Item 1A, earnings → Item 2)
 
-#### Scalability Limits
-
-- **Concurrent users**: 1000 (Vercel serverless auto-scales)
-- **Rate limit**: 10 req/sec to SEC (global)
-- **Database connections**: 100 (connection pooling)
-- **Blob storage**: 1TB monthly transfer
-- **Vector dimensions**: 1536 (OpenAI ada-002)
-- **Max chunks per search**: 10,000
-
-### 10. Security Considerations
-
-#### Input Validation
-
-- All user inputs sanitized with Zod schemas
-- SQL injection prevented via Prisma parameterized queries
-- XSS prevention in HTML parsing
-- Rate limiting on all endpoints
-
-#### Data Privacy
-
-- No PII stored beyond public filing data
-- Temporary filing storage with TTL
-- No user data persistence
-- Audit logs contain only public identifiers
-
-#### API Security
-
-- CORS configured for specific origins
-- API routes require authentication (in production)
-- Environment variables for sensitive config
-- No direct database access from client
-
-### 11. Monitoring & Observability
-
-#### Key Metrics
-
+#### Performance Optimization
 ```typescript
-interface Metrics {
-  // Availability
-  uptime: number;                    // Target: 99.9%
-  errorRate: number;                 // Target: <1%
-  
-  // Performance
-  queryLatencyP95: number;           // Target: <5s
-  secApiLatency: number;             // Track SEC responsiveness
-  
-  // Usage
-  dailyActiveUsers: number;
-  queriesPerDay: number;
-  secApiCallsPerDay: number;        // Monitor rate limit usage
-  
-  // Quality
-  citationAccuracy: number;          // Target: >95%
-  querySuccessRate: number;         // Queries with results
+interface SearchConfig {
+  bm25Weight: 0.4;
+  embeddingWeight: 0.4; 
+  sectionBoost: 0.2;
+  maxCandidates: 200;
+  minRelevanceThreshold: 0.7;
+  timeoutMs: 10000;
 }
 ```
 
-#### Logging Structure
+### 5. Evidence Verification System
 
+#### Citation Verification Process
+1. **Hash Calculation**: SHA-256 of exact text content from SEC filing
+2. **Offset Validation**: Start/end character positions in original document
+3. **URL Construction**: Direct links to SEC.gov Archives with anchor fragments
+4. **Content Freshness**: Verification against latest filed versions
+5. **Cross-Reference Check**: Multiple sources for critical claims
+
+#### Guardrail Implementation
 ```typescript
-interface LogEntry {
-  timestamp: string;
-  level: 'debug' | 'info' | 'warn' | 'error';
-  operation: string;
-  duration?: number;
-  toolName?: string;
-  secUrl?: string;
-  error?: string;
-  correlationId: string;
-}
-```
-
-### 12. Production Deployment Architecture (Updated for EDGAR MCP)
-
-#### Vercel Configuration
-
-```json
-{
-  "functions": {
-    "app/api/chat/route.ts": {
-      "runtime": "nodejs20.x",
-      "maxDuration": 60,
-      "memory": 1024
-    },
-    "app/api/filings/[cik]/route.ts": {
-      "runtime": "nodejs20.x", 
-      "maxDuration": 30,
-      "memory": 512
+class EvidenceGuardrails {
+  async validateClaim(claim: string, evidence: Evidence[]): Promise<ValidationResult> {
+    // No evidence = no claim
+    if (evidence.length === 0) {
+      return { valid: false, reason: "NO_EVIDENCE_FOUND" };
     }
-  },
-  "regions": ["iad1"],
-  "env": {
-    "NODE_ENV": "production",
-    "EDGAR_MCP_SERVER_URL": "https://edgar-mcp.railway.app",
-    "EDGAR_MCP_API_KEY": "$EDGAR_MCP_API_KEY"
+    
+    // Numeric claims require XBRL validation
+    if (this.containsNumericClaim(claim)) {
+      return await this.validateNumericEvidence(claim, evidence);
+    }
+    
+    // Hash verification for all citations
+    return await this.verifyEvidenceHashes(evidence);
   }
 }
 ```
 
-#### Multi-Service Infrastructure
+## 🔍 Query Processing Examples
 
+### Complex Restatement Analysis
 ```typescript
-// Updated infrastructure for hybrid EDGAR MCP architecture
-const productionInfrastructure = {
-  // Vercel (Primary Application)
-  compute: "Vercel Serverless Functions (Node.js 20)",
-  database: "Neon PostgreSQL with pgvector",
-  cache: "Upstash Redis (Global)",  
-  storage: "Vercel Blob Storage",
-  cdn: "Vercel Edge Network",
-  
-  // External EDGAR MCP Service  
-  mcpService: "Railway/Render Containerized Service",
-  mcpImage: "sha256:16f40558c81c4e4496e02df704fe1cf5d4e65f8ed48af805bf6eee43f8afb32b",
-  mcpEndpoint: "HTTPS REST API with CORS + Authentication",
-  mcpBridge: "✅ HTTP Bridge successfully created & tested (services/edgar-mcp-http-bridge)",
-  
-  // Monitoring & Security
-  monitoring: "Vercel Analytics + External MCP Health Checks",
-  secrets: "Vercel Environment Variables + Railway Secrets",
-  rateLimiting: "Coordinated across Vercel + MCP service"
+// Query: "Find 8-K Item 4.02 restatements related to ASC 606 principal vs agent (3y)"
+const plan: ExecutionPlan = {
+  steps: [
+    {
+      tool: "discover_filings",
+      parameters: { form: "8-K", items: ["4.02"], dateRange: "3y" },
+      dependencies: []
+    },
+    {
+      tool: "hybrid_search", 
+      parameters: { 
+        terms: ["revenue recognition", "principal vs agent", "ASC 606"],
+        sections: ["item_4_02"],
+        minRelevance: 0.8 
+      },
+      dependencies: ["discover_filings"]
+    },
+    {
+      tool: "extract_evidence_spans",
+      parameters: { topK: 3, contextWindow: 500 },
+      dependencies: ["hybrid_search"]
+    },
+    {
+      tool: "tabulate_results",
+      parameters: { 
+        columns: ["company", "date", "reason", "filing_url", "text_offset"] 
+      },
+      dependencies: ["extract_evidence_spans"]
+    }
+  ]
 };
 ```
 
-#### Environment Variables (Updated)
-
-```bash
-# Vercel Environment Variables
-DATABASE_URL="postgresql://user:pass@host.neon.tech/db"
-REDIS_URL="redis://default:token@host.upstash.io:6379"
-BLOB_READ_WRITE_TOKEN="vercel_blob_token"
-
-# EDGAR MCP Integration (NEW)
-EDGAR_MCP_SERVER_URL="https://edgar-mcp-service.railway.app"
-EDGAR_MCP_API_KEY="secure_api_key_for_mcp_service"
-
-# SEC Compliance
-SEC_EDGAR_USER_AGENT="EdgarAnswerEngine/1.0 (contact@example.com)"
-
-# Feature Flags
-ENABLE_MCP_FALLBACK=true
-ENABLE_DIRECT_SEC_API=true
-```
-
-#### Deployment Pipeline
-
-```mermaid
-graph TD
-    A[Code Push] --> B[Vercel Deploy]
-    A --> C[Railway Deploy MCP Service]
-    
-    B --> D[Test Vercel Functions]
-    C --> E[Test MCP HTTP Endpoints]
-    
-    D --> F[Integration Tests]
-    E --> F
-    
-    F --> G[Production Deployment]
-    G --> H[Health Checks]
-    H --> I[Monitor Performance]
-```
-
-### 13. Cost Optimization
-
-#### Resource Usage Estimates
-
-| Resource | Usage | Monthly Cost |
-|----------|-------|--------------|
-| Vercel Pro | Hosting + Functions | $20 |
-| Neon DB | 10GB storage + compute | $25 |
-| Upstash Redis | 10K commands/day | $10 |
-| OpenAI API | 1M tokens/day | $30 |
-| Vercel Blob | 100GB storage | $10 |
-| **Total** | | **~$95/month** |
-
-#### Optimization Strategies
-
-1. **Cache aggressively**: Cache company resolutions (24hr), common queries (1hr)
-2. **Batch operations**: Group SEC API calls when possible
-3. **Progressive loading**: Stream results as available
-4. **Smart indexing**: Only index frequently accessed companies
-5. **TTL management**: Auto-cleanup old data
-
-### 14. Disaster Recovery
-
-#### Backup Strategy
-
-- **Database**: Daily automated backups (7-day retention)
-- **Code**: Git repository with tagged releases
-- **Configuration**: Environment variables in Vercel dashboard
-- **Filing cache**: Ephemeral, can be rebuilt from SEC
-
-#### Recovery Procedures
-
-1. **Service outage**: Auto-failover via Vercel regions
-2. **Database failure**: Restore from snapshot (<1hr RTO)
-3. **SEC API down**: Queue requests, serve from cache
-4. **Rate limit hit**: Exponential backoff, user notification
-
-### 15. Advanced Query Capabilities
-
-#### Supported Complex Query Patterns
-
-Based on functionality analysis, the architecture supports these advanced patterns:
-
-1. **Regulatory Compliance Analysis**
-   - Find all 8-K Item 4.02 restatements with revenue recognition issues
-   - Search SEC comment letters (UPLOAD/CORRESP) for recurring themes
-   - Track early adoption of FASB standards across companies
-   - *Implementation*: Thematic search + specialized sectionizers
-
-2. **Accounting Policy Tracking**
-   - Compare revenue recognition changes over multiple years
-   - Identify ASC 606/ASC 860 specific implementations
-   - Find milestone method usage in life sciences companies
-   - *Implementation*: Time-series analysis + semantic similarity
-
-3. **Corporate Event Correlation**
-   - Link acquisitions to segment reporting changes
-   - Track factoring arrangements as failed sales
-   - Monitor goodwill impairment triggers
-   - *Implementation*: Cross-filing reference + temporal analysis
-
-4. **Industry-Specific Analysis**
-   - Cryptocurrency/blockchain company disclosures
-   - Life sciences revenue recognition methods
-   - Technology sector AI risk disclosures
-   - *Implementation*: Industry classification + thematic clustering
-
-#### Query Processing Examples
-
-**Example 1: Complex 8-K Analysis**
-```
-Query: "Find all 8-K Item 4.02 restatements related to ASC 606"
-Process:
-1. bulkFilingDiscovery(form="8-K", dateRange="3years")
-2. Filter by Item 4.02 presence
-3. crossDocumentSearch("revenue recognition", "ASC 606", "principal agent")
-4. Extract relevant sections with sectionizers
-5. LLM summarizes with table format
-```
-
-**Example 2: Comment Letter Theme Analysis**
-```
-Query: "SEC comment letters to crypto companies on revenue recognition"
-Process:
-1. Identify crypto companies via industry classification
-2. bulkFilingDiscovery(form=["UPLOAD","CORRESP"], companies=cryptoList)
-3. crossDocumentSearch("revenue recognition")
-4. Theme extraction and pattern analysis
-5. Aggregate common SEC concerns
-```
-
-### 16. Future Architecture Considerations
-
-#### Potential Enhancements
-
-1. **Multi-region deployment**: Reduce latency globally
-2. **Edge caching**: Cache common queries at edge
-3. **Streaming LLM**: Reduce time to first byte
-4. **Webhook updates**: Real-time filing notifications
-5. **Batch API**: Process multiple queries efficiently
-
-#### Scaling Considerations
-
+### Temporal Event Correlation
 ```typescript
-interface ScalingPlan {
-  phase1: {
-    users: 1000,
-    infrastructure: "Current architecture",
-    cost: "$100/month"
-  },
-  phase2: {
-    users: 10000,
-    infrastructure: "+ Read replicas, CDN",
-    cost: "$500/month"
-  },
-  phase3: {
-    users: 100000,
-    infrastructure: "+ Multi-region, dedicated compute",
-    cost: "$5000/month"
-  }
+// Query: "Show segment changes within 12 months of acquisitions"
+const correlationPlan: ExecutionPlan = {
+  steps: [
+    {
+      tool: "detect_acquisitions",
+      parameters: { sources: ["8-K_2.01", "10-K_business"] },
+      dependencies: []
+    },
+    {
+      tool: "link_temporal_events",
+      parameters: { eventType: "segment_change", window: "12mo" },
+      dependencies: ["detect_acquisitions"]
+    },
+    {
+      tool: "correlate_events",
+      parameters: { correlationType: "causal", confidenceMin: 0.7 },
+      dependencies: ["link_temporal_events"]
+    }
+  ]
+};
+```
+
+## 📊 Performance Specifications
+
+### Latency Targets
+| Query Type | Target Latency | Evidence Sources | Verification Level |
+|------------|----------------|------------------|-------------------|
+| Company-specific facts | <3s | XBRL + narrative | Hash verified |
+| Complex correlation | <15s | Multi-form analysis | Full verification |
+| Thematic analysis | <10s | Cross-company search | Sampled verification |
+| Numeric validation | <5s | XBRL-first lookup | Full cross-check |
+
+### Accuracy Metrics
+- **Citation Accuracy**: 95%+ verified against official SEC text
+- **Evidence Coverage**: 90%+ recall@5 for domain queries
+- **False Positive Rate**: <2% for claimed correlations
+- **Numeric Accuracy**: 99.9% for XBRL-backed financial data
+
+## 🛡️ Security & Compliance
+
+### SEC API Compliance
+- **User-Agent**: Descriptive identification with contact information
+- **Rate Limiting**: Coordinated 10 req/sec limit across all services
+- **Backoff Strategy**: Exponential backoff for 429/503 responses
+- **Respectful Caching**: Reasonable TTL to reduce SEC infrastructure load
+
+### Data Security
+- **No PII Storage**: Only public filing data processed
+- **Ephemeral Processing**: Temporary analysis data with TTL
+- **Hash-Only Citations**: Text hashes stored, not full content
+- **Audit Logging**: All queries logged with public identifiers only
+
+## 🚀 Deployment Architecture
+
+### Cloudflare Workers Configuration
+```toml
+name = "edgar-mcp-server"
+main = "src/index.ts"
+compatibility_date = "2024-08-14"
+
+[durable_objects]
+bindings = [
+  { name = "EDGAR_EVIDENCE_STORE", class_name = "EdgarEvidenceStore" },
+  { name = "QUERY_SESSION", class_name = "QuerySessionState" }
+]
+
+[vars]
+SEC_USER_AGENT = "EdgarAnswerEngine/2.0 (evidence-first analysis)"
+HYBRID_SEARCH_TIMEOUT = "15000"
+MAX_CONCURRENT_FETCHES = "10"
+EVIDENCE_VERIFICATION_LEVEL = "FULL"
+```
+
+### Global Distribution
+- **Edge Deployment**: 200+ Cloudflare locations worldwide
+- **Regional Optimization**: Evidence store replicated to user regions
+- **Failover Strategy**: Multi-region deployment with automatic failover
+- **Performance Monitoring**: Sub-second health checks with detailed metrics
+
+## 🔄 Integration Points
+
+### Client Integration
+```typescript
+interface EdgarClient {
+  // Evidence-first query interface
+  async queryWithEvidence(
+    query: string, 
+    options: {
+      verificationLevel: 'FULL' | 'SAMPLED' | 'HASH_ONLY';
+      maxLatency: number;
+      requiredSources: string[];
+    }
+  ): Promise<EvidenceBackedResponse>;
+  
+  // Plan preview for complex queries
+  async previewExecutionPlan(query: string): Promise<ExecutionPlan>;
+  
+  // Citation verification
+  async verifyCitation(citation: Citation): Promise<VerificationResult>;
 }
 ```
 
----
+### Monitoring & Observability
+- **Query Performance**: Latency distribution by query complexity
+- **Evidence Quality**: Citation accuracy and verification rates
+- **Tool Performance**: Individual tool latency and success rates
+- **SEC API Health**: Rate limiting, error rates, response times
+- **User Patterns**: Query types, success rates, error categories
 
-*This architecture reference should be used alongside PROJECT_ROADMAP.md for implementation timeline and DEVELOPMENT_GUIDE.md for code details.*
+This architecture provides institutional-grade SEC analysis capabilities with verifiable accuracy, comprehensive domain expertise, and zero-hallucination guarantees through evidence-first design principles.
