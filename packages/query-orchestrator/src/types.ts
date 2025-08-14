@@ -129,6 +129,12 @@ export interface ExtractedEntities {
     confidence: number;
     keywords: string[];
   }>;
+  queryIntent?: {
+    intent: string;
+    confidence: number;
+    recommendedForms: string[];
+    priority: 'latest' | 'recent' | 'comprehensive';
+  };
 }
 
 // Orchestration error types

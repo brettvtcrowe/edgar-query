@@ -1,17 +1,13 @@
-# Standalone deployment without Docker-in-Docker
-# This uses a direct MCP server approach instead of spawning containers
-
-FROM stefanoamorelli/sec-edgar-mcp:latest AS mcp
-
+# Production MCP HTTP Bridge using official mcp/sec-edgar image
 FROM node:20-alpine
 
 WORKDIR /app
 
-# Copy MCP server files from the official image
-COPY --from=mcp /app /mcp
+# Install Docker CLI for spawning official mcp/sec-edgar containers
+RUN apk add --no-cache docker-cli python3 py3-pip
 
-# Install Python for MCP server (if needed)
-RUN apk add --no-cache python3 py3-pip
+# Pull the official MCP image for offline use
+RUN docker pull mcp/sec-edgar:latest || echo "Docker daemon not available during build"
 
 # Copy package files
 COPY package*.json ./

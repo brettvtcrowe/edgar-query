@@ -72,6 +72,60 @@ export class EntityExtractor {
     ]
   };
 
+  // Query intent classification patterns
+  private readonly queryIntents = {
+    'revenue': {
+      keywords: ['revenue', 'sales', 'income', 'earnings', 'profit', 'quarterly results', 'financial results', 'top line'],
+      forms: ['10-Q', '10-K'], // Latest financial data
+      priority: 'latest'
+    },
+    'earnings': {
+      keywords: ['earnings', 'quarterly earnings', 'earnings report', 'eps', 'earnings per share'],
+      forms: ['10-Q', '8-K'], // Quarterly results + earnings releases
+      priority: 'latest'
+    },
+    'risk_factors': {
+      keywords: ['risk factors', 'risks', 'risk disclosure', 'uncertainties', 'material risks'],
+      forms: ['10-K'], // Annual comprehensive risk disclosure
+      priority: 'comprehensive'
+    },
+    'leadership_changes': {
+      keywords: ['leadership', 'ceo', 'cfo', 'executive', 'management changes', 'board changes', 'appointments', 'departures'],
+      forms: ['8-K'], // Current reports for exec changes
+      priority: 'recent'
+    },
+    'annual_results': {
+      keywords: ['annual results', 'yearly', 'full year', 'fy', 'fiscal year', 'annual report'],
+      forms: ['10-K'], // Full year comprehensive data
+      priority: 'comprehensive'
+    },
+    'quarterly_results': {
+      keywords: ['quarterly', 'q1', 'q2', 'q3', 'q4', 'quarter', 'quarterly report'],
+      forms: ['10-Q'], // Quarterly data
+      priority: 'latest'
+    },
+    'recent_events': {
+      keywords: ['recent', 'current events', 'material events', 'corporate events', 'announcements'],
+      forms: ['8-K'], // Material events and changes
+      priority: 'recent'
+    },
+    'business_segments': {
+      keywords: ['business', 'segments', 'divisions', 'operations', 'products', 'services', 'what does'],
+      forms: ['10-K', '10-Q'], // Business description
+      priority: 'comprehensive'
+    },
+    'cash_flow': {
+      keywords: ['cash flow', 'cash', 'liquidity', 'working capital', 'free cash flow'],
+      forms: ['10-Q', '10-K'], // Financial statements
+      priority: 'latest'
+    },
+    'acquisitions': {
+      keywords: ['acquisition', 'merger', 'purchase', 'deal', 'transaction', 'bought', 'acquired'],
+      forms: ['8-K', '10-Q'], // Recent transactions
+      priority: 'recent'
+    }
+  };
+
   /**
    * Extract all entities from a query
    */
@@ -81,13 +135,14 @@ export class EntityExtractor {
       tickers: [],
       forms: [],
       timeExpressions: [],
-      topics: []
+      topics: [],
+      queryIntent: this.classifyQueryIntent(query)
     };
 
     // Extract companies and tickers
     this.extractCompaniesAndTickers(query, entities);
     
-    // Extract form types
+    // Extract form types (supplement with intent-based forms)
     this.extractFormTypes(query, entities);
     
     // Extract time expressions
@@ -97,6 +152,54 @@ export class EntityExtractor {
     this.extractTopics(query, entities);
 
     return entities;
+  }
+
+  /**
+   * Classify query intent and determine appropriate filing types
+   */
+  classifyQueryIntent(query: string): { intent: string; confidence: number; recommendedForms: string[]; priority: 'latest' | 'recent' | 'comprehensive' } | undefined {
+    const lowerQuery = query.toLowerCase();
+    let bestIntent: string | null = null;
+    let bestScore = 0;
+    let bestMatch: any = null;
+
+    // Score each intent based on keyword matches
+    for (const [intent, config] of Object.entries(this.queryIntents)) {
+      let score = 0;
+      let matchedKeywords = 0;
+
+      for (const keyword of config.keywords) {
+        if (lowerQuery.includes(keyword.toLowerCase())) {
+          score += keyword.length; // Longer keywords get higher weight
+          matchedKeywords++;
+        }
+      }
+
+      // Boost score based on number of keywords matched
+      if (matchedKeywords > 0) {
+        score *= (1 + matchedKeywords * 0.2); // 20% boost per additional keyword
+      }
+
+      if (score > bestScore) {
+        bestScore = score;
+        bestIntent = intent;
+        bestMatch = config;
+      }
+    }
+
+    if (bestIntent && bestMatch) {
+      // Calculate confidence based on score and query length
+      const confidence = Math.min(0.95, bestScore / Math.max(lowerQuery.length * 0.1, 1));
+      
+      return {
+        intent: bestIntent,
+        confidence,
+        recommendedForms: bestMatch.forms,
+        priority: bestMatch.priority as 'latest' | 'recent' | 'comprehensive'
+      };
+    }
+
+    return undefined;
   }
 
   /**

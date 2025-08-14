@@ -138,16 +138,33 @@ export class QueryOrchestrator {
       dependsOn: entities?.tickers?.length > 0 ? ['getCIKByTicker'] : undefined
     });
 
-    // Step 3: Get recent filings if needed
-    if (entities?.forms?.length > 0 || entities?.timeRanges?.length > 0 || entities?.topics?.length > 0) {
+    // Step 3: Get recent filings - Use intelligent form selection based on query intent
+    const shouldGetFilings = entities?.forms?.length > 0 || entities?.timeRanges?.length > 0 || entities?.topics?.length > 0 || entities?.queryIntent;
+    
+    if (shouldGetFilings) {
+      // Determine filing forms based on query intent
+      let formTypes: string[] = [];
+      
+      if (entities?.queryIntent?.recommendedForms?.length > 0) {
+        // Use query intent recommendation
+        formTypes = entities.queryIntent.recommendedForms;
+      } else if (entities?.forms?.length > 0) {
+        // Use explicitly mentioned forms
+        formTypes = entities.forms.map((f: any) => f.type || f);
+      } else {
+        // Default fallback
+        formTypes = ['10-Q', '10-K', '8-K'];
+      }
+      
       steps.push({
         type: 'list_filings' as const,
         tool: 'getRecentFilings',
         params: {
           identifier: entities?.companies?.[0] || entities?.tickers?.[0],
-          form_type: entities?.forms?.[0],
+          form_types: formTypes, // Now using intelligent form selection
           days: this.parseTimeRange(entities?.timeRanges?.[0]),
-          limit: context?.preferences?.maxResults || 10
+          limit: context?.preferences?.maxResults || 20, // Increased to allow better selection
+          queryIntent: entities?.queryIntent // Pass intent for prioritization
         },
         priority: 3,
         dependsOn: ['getCompanyInfo']
@@ -161,7 +178,8 @@ export class QueryOrchestrator {
         tool: 'getFilingSections',
         params: {
           identifier: entities?.companies?.[0] || entities?.tickers?.[0],
-          sections: this.mapTopicsToSections(entities.topics)
+          sections: this.mapTopicsToSections(entities.topics),
+          queryIntent: entities?.queryIntent // Pass intent for section prioritization
         },
         priority: 4,
         dependsOn: ['getRecentFilings']
@@ -380,10 +398,8 @@ export class QueryOrchestrator {
             let accessionNumber = step.params.accession_number;
             if (!accessionNumber && results.getRecentFilings) {
               const filings = results.getRecentFilings;
-              // Find the most recent 10-K or 10-Q filing
-              const relevantFiling = filings.find((f: any) => 
-                f.form === '10-K' || f.form === '10-Q' || f.formType === '10-K' || f.formType === '10-Q'
-              ) || filings[0]; // Fallback to most recent filing
+              // Use intelligent filing selection based on query intent
+              const relevantFiling = this.selectFilingByIntent(filings, step.params.queryIntent);
               
               if (relevantFiling) {
                 accessionNumber = relevantFiling.accessionNumber || relevantFiling.accession_number;
@@ -530,6 +546,82 @@ export class QueryOrchestrator {
       startChar: section.startOffset,
       endChar: section.endOffset
     }));
+  }
+
+  /**
+   * Intelligent filing selection based on query intent
+   */
+  private selectFilingByIntent(filings: any[], queryIntent?: any): any {
+    if (!filings || filings.length === 0) return null;
+    
+    // If no intent, use the previous logic as fallback
+    if (!queryIntent) {
+      return filings.find((f: any) => 
+        f.form === '10-K' || f.form === '10-Q' || f.formType === '10-K' || f.formType === '10-Q'
+      ) || filings[0];
+    }
+    
+    const { intent, recommendedForms, priority } = queryIntent;
+    
+    console.log(`🎯 Selecting filing based on intent: ${intent} (priority: ${priority})`);
+    console.log(`📋 Recommended forms: ${recommendedForms?.join(', ')}`);
+    console.log(`📁 Available filings: ${filings.map(f => f.form || f.formType).join(', ')}`);
+    
+    // Filter filings by recommended form types
+    let candidateFilings = filings;
+    if (recommendedForms?.length > 0) {
+      candidateFilings = filings.filter((f: any) => {
+        const formType = f.form || f.formType;
+        return recommendedForms.some((recommended: string) => 
+          formType?.toUpperCase().includes(recommended.toUpperCase())
+        );
+      });
+      
+      // If no matches for recommended forms, fall back to all filings
+      if (candidateFilings.length === 0) {
+        candidateFilings = filings;
+      }
+    }
+    
+    // Sort by priority based on intent
+    candidateFilings.sort((a: any, b: any) => {
+      const aDate = new Date(a.filedAt || a.date || a.filing_date);
+      const bDate = new Date(b.filedAt || b.date || b.filing_date);
+      
+      switch (priority) {
+        case 'latest':
+          // For revenue, earnings queries - get most recent data
+          return bDate.getTime() - aDate.getTime(); // Latest first
+          
+        case 'recent':
+          // For events, leadership changes - prefer recent but not necessarily latest
+          return bDate.getTime() - aDate.getTime(); // Recent first
+          
+        case 'comprehensive':
+          // For annual reports, risk factors - prefer 10-K then by recency
+          const aForm = a.form || a.formType;
+          const bForm = b.form || b.formType;
+          
+          if (aForm === '10-K' && bForm !== '10-K') return -1;
+          if (bForm === '10-K' && aForm !== '10-K') return 1;
+          
+          return bDate.getTime() - aDate.getTime(); // Then by recency
+          
+        default:
+          return bDate.getTime() - aDate.getTime(); // Default to latest
+      }
+    });
+    
+    const selectedFiling = candidateFilings[0];
+    
+    if (selectedFiling) {
+      console.log(`✅ Selected filing: ${selectedFiling.form || selectedFiling.formType} filed ${selectedFiling.filedAt || selectedFiling.date}`);
+    } else {
+      console.log(`❌ No suitable filing found, using fallback`);
+      return filings[0];
+    }
+    
+    return selectedFiling;
   }
 
   /**

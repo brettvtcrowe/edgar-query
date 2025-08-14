@@ -36,8 +36,11 @@ export class MCPServiceClient {
   async isAvailable(): Promise<boolean> {
     try {
       const response = await this.request('/health', 'GET');
-      return response.status === 'ok' && response.mcp_connection === true;
-    } catch {
+      // Accept service as available if HTTP bridge is running, even if MCP connection is down
+      // This allows us to use basic SEC API functionality through the MCP interface
+      return response.status === 'ok';
+    } catch (error) {
+      console.warn('MCP service not available:', error instanceof Error ? error.message : error);
       return false;
     }
   }
