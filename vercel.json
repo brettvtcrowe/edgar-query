@@ -2,5 +2,6 @@
   "framework": "nextjs",
   "buildCommand": "turbo run build --filter=@edgar-query/web",
   "outputDirectory": "apps/web/.next",
-  "installCommand": "npm ci"
+  "installCommand": "npm ci",
+  "rootDirectory": "apps/web"
 }
