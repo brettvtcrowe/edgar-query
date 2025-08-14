@@ -351,6 +351,19 @@ Follow the phase structure in [docs/PROJECT_ROADMAP.md](./docs/PROJECT_ROADMAP.m
 
 ### Common Issues
 
+#### Vercel Deployment Failures
+**Error**: `ENOENT: no such file or directory, lstat '/vercel/path0/node_modules/.prisma/client/libquery_engine-rhel-openssl-3.0.x.so.node'`
+
+**Solution**: Ensure `apps/web/prisma/schema.prisma` includes correct binary targets:
+```prisma
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+  binaryTargets   = ["native", "rhel-openssl-3.0.x"]
+}
+```
+The `rhel-openssl-3.0.x` target is required for Vercel's Linux serverless environment.
+
 #### Database Connection Issues
 ```bash
 # Check connection string format

@@ -67,15 +67,17 @@ export class EDGARMCPClient {
     }
 
     try {
-      // Spawn the EDGAR MCP Docker container
-      this.process = spawn('docker', [
-        'run',
-        '--rm',
-        '--interactive',
-        '--env', `SEC_EDGAR_USER_AGENT=${this.config.userAgent}`,
-        this.config.dockerImage!
+      // Spawn the embedded EDGAR MCP server (copied from Docker image)
+      const mcpPath = process.env.MCP_SERVER_PATH || '/mcp';
+      this.process = spawn('python', [
+        `${mcpPath}/src/sec_edgar_mcp/server.py`
       ], {
-        stdio: ['pipe', 'pipe', 'pipe']
+        stdio: ['pipe', 'pipe', 'pipe'],
+        env: {
+          ...process.env,
+          SEC_EDGAR_USER_AGENT: this.config.userAgent,
+          PYTHONPATH: mcpPath
+        }
       });
 
       this.setupProcessHandlers();

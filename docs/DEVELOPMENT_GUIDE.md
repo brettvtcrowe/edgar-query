@@ -882,6 +882,19 @@ const filings = await timedOperation('list_filings', async () => {
 - [ ] Rate limits tested
 - [ ] Error handling verified
 - [ ] Monitoring enabled
+- [ ] Prisma binary targets configured for Linux runtime
+
+#### Vercel Deployment Notes
+**Critical**: Ensure `apps/web/prisma/schema.prisma` includes:
+```prisma
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+  binaryTargets   = ["native", "rhel-openssl-3.0.x"]
+}
+```
+The `rhel-openssl-3.0.x` target generates the Linux binary required for Vercel's serverless environment. Without this, deployment will fail with:
+`ENOENT: no such file or directory, lstat '/vercel/path0/node_modules/.prisma/client/libquery_engine-rhel-openssl-3.0.x.so.node'`
 
 ---
 

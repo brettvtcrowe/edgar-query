@@ -86,3 +86,21 @@ If you want to test incrementally, add these first:
 3. `SEC_USER_AGENT`
 
 Then redeploy and test the chat API.
+
+## 🐛 Common Deployment Issues
+
+### Prisma Binary Targets Error
+
+**Error**: `ENOENT: no such file or directory, lstat '/vercel/path0/node_modules/.prisma/client/libquery_engine-rhel-openssl-3.0.x.so.node'`
+
+**Solution**: Ensure your `prisma/schema.prisma` includes the correct binary targets:
+
+```prisma
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+  binaryTargets   = ["native", "rhel-openssl-3.0.x"]
+}
+```
+
+The `rhel-openssl-3.0.x` target is required for Vercel's Linux serverless environment.
