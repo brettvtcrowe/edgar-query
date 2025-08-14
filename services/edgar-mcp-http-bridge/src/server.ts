@@ -12,7 +12,7 @@ import { z } from 'zod';
 import { EDGARMCPClient } from './edgar-mcp-client.js';
 
 const app = express();
-const port = process.env.PORT || 3001;
+const port = process.env.PORT || 3002;
 
 // CORS configuration for production
 const corsOptions = {
