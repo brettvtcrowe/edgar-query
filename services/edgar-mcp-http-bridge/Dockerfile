@@ -1,10 +1,17 @@
-# Use Node.js 20 Alpine for smaller image
-FROM node:20-alpine AS builder
+# Standalone deployment without Docker-in-Docker
+# This uses a direct MCP server approach instead of spawning containers
 
-# Install Docker CLI for spawning MCP container
-RUN apk add --no-cache docker-cli
+FROM stefanoamorelli/sec-edgar-mcp:latest AS mcp
+
+FROM node:20-alpine
 
 WORKDIR /app
+
+# Copy MCP server files from the official image
+COPY --from=mcp /app /mcp
+
+# Install Python for MCP server (if needed)
+RUN apk add --no-cache python3 py3-pip
 
 # Copy package files
 COPY package*.json ./
@@ -19,26 +26,18 @@ COPY src ./src
 # Build TypeScript
 RUN npm run build
 
-# Production stage
-FROM node:20-alpine
-
-# Install Docker CLI for runtime
-RUN apk add --no-cache docker-cli
-
-WORKDIR /app
-
-# Copy package files and install production dependencies
-COPY package*.json ./
+# Install production dependencies
 RUN npm ci --only=production
 
-# Copy built application
-COPY --from=builder /app/dist ./dist
+# Environment setup
+ENV MCP_SERVER_PATH=/mcp
+ENV NODE_ENV=production
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD node -e "require('http').get('http://localhost:' + (process.env.PORT || 3001) + '/health', (res) => process.exit(res.statusCode === 200 ? 0 : 1))"
 
-# Expose port (Railway will set PORT env var)
+# Expose port
 EXPOSE 3001
 
 # Start the server
