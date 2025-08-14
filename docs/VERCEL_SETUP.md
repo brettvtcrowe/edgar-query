@@ -30,7 +30,12 @@ REDIS_URL=your-existing-upstash-connection-string
 BLOB_READ_WRITE_TOKEN=your-existing-vercel-blob-token
 ```
 
-### 6. Application Config
+### 6. LLM Configuration (Required for Chat API)
+```bash
+OPENAI_API_KEY=sk-your-openai-api-key-here
+```
+
+### 7. Application Config
 ```bash
 NODE_ENV=production
 NEXT_PUBLIC_APP_URL=https://edgar-query-nu.vercel.app
