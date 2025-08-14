@@ -1,5 +1,5 @@
 {
-  "buildCommand": "npx turbo run build --filter=@edgar-query/web && cp -r apps/web/.next .next",
-  "outputDirectory": ".next",
+  "buildCommand": "npx turbo run build --filter=@edgar-query/web",
+  "outputDirectory": "apps/web/.next",
   "installCommand": "npm ci"
 }
