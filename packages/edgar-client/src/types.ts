@@ -53,10 +53,14 @@ export type FilingContent = z.infer<typeof FilingContentSchema>;
 
 // Section types
 export const SectionSchema = z.object({
+  id: z.string(),
   title: z.string(),
   content: z.string(),
+  sectionType: z.string(),
+  order: z.number(),
   startOffset: z.number().optional(),
-  endOffset: z.number().optional()
+  endOffset: z.number().optional(),
+  metadata: z.any().optional()
 });
 
 export type Section = z.infer<typeof SectionSchema>;
