@@ -139,7 +139,7 @@ export class QueryOrchestrator {
     });
 
     // Step 3: Get recent filings if needed
-    if (entities?.forms?.length > 0 || entities?.timeRanges?.length > 0) {
+    if (entities?.forms?.length > 0 || entities?.timeRanges?.length > 0 || entities?.topics?.length > 0) {
       steps.push({
         type: 'list_filings' as const,
         tool: 'getRecentFilings',
