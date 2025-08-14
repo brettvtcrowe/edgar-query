@@ -232,24 +232,134 @@ export class EDGARClient {
     accession_number: string;
     sections?: string[];
   }): Promise<Section[]> {
-    if (!this.useMCP || !this.mcpClient) {
-      throw new EDGARClientError(
-        'Filing sections extraction requires MCP service',
-        'MCP_REQUIRED'
-      );
-    }
-    
     const cacheKey = `sections:${params.identifier}:${params.accession_number}:${params.sections?.join(',')}`;
     const cached = this.getFromCache(cacheKey);
     if (cached) return cached;
     
     try {
-      const result = await this.mcpClient.getFilingSections(params);
+      let result: Section[];
+      
+      if (this.useMCP && this.mcpClient) {
+        result = await this.mcpClient.getFilingSections(params);
+      } else {
+        // SEC API fallback: get filing content and parse sections
+        result = await this.parseFilingSections(params);
+      }
+      
       this.setCache(cacheKey, result, this.cacheTTL * 4);
       return result;
+      
     } catch (error) {
+      if (this.useMCP && this.config.enableFallback !== false) {
+        console.warn('MCP sections failed, trying SEC API fallback');
+        this.useMCP = false;
+        return this.getFilingSections(params);
+      }
       throw this.wrapError(error);
     }
+  }
+
+  /**
+   * Parse filing content into sections (SEC API fallback)
+   */
+  private async parseFilingSections(params: {
+    identifier: string;
+    accession_number: string;
+    sections?: string[];
+  }): Promise<Section[]> {
+    // Get the full filing content
+    const filingContent = await this.getFilingContent({
+      identifier: params.identifier,
+      accession_number: params.accession_number
+    });
+    
+    const sections: Section[] = [];
+    const content = filingContent.content;
+    
+    // Basic section extraction for 10-K/10-Q forms
+    if (filingContent.metadata.form?.includes('10-K') || filingContent.metadata.form?.includes('10-Q')) {
+      // Look for revenue/financial data sections
+      const revenueSection = this.extractRevenueSection(content, filingContent.metadata);
+      if (revenueSection) {
+        sections.push(revenueSection);
+      }
+      
+      // Look for business overview section
+      const businessSection = this.extractBusinessSection(content, filingContent.metadata);
+      if (businessSection) {
+        sections.push(businessSection);
+      }
+    }
+    
+    // If no specific sections found, return the full content as one section
+    if (sections.length === 0) {
+      sections.push({
+        id: `${params.accession_number}_full`,
+        title: `${filingContent.metadata.form} Filing Content`,
+        content: content.slice(0, 10000), // Limit to first 10k chars
+        sectionType: 'full_document',
+        order: 1,
+        metadata: filingContent.metadata
+      });
+    }
+    
+    return sections;
+  }
+
+  /**
+   * Extract revenue/financial data section from filing content
+   */
+  private extractRevenueSection(content: string, metadata: any): Section | null {
+    // Look for consolidated statements of operations or revenue discussions
+    const revenuePatterns = [
+      /CONSOLIDATED STATEMENTS OF OPERATIONS[\s\S]{1,5000}/i,
+      /revenue[s]?[\s\S]{1,2000}(?=(?:cost|expense|income|gross))/i,
+      /net sales[\s\S]{1,2000}/i,
+      /total revenue[s]?[\s\S]{1,1500}/i
+    ];
+    
+    for (const pattern of revenuePatterns) {
+      const match = content.match(pattern);
+      if (match) {
+        return {
+          id: `${metadata.accessionNumber}_revenue`,
+          title: 'Revenue and Financial Performance',
+          content: match[0].trim(),
+          sectionType: 'financial_statements',
+          order: 1,
+          metadata
+        };
+      }
+    }
+    
+    return null;
+  }
+
+  /**
+   * Extract business section from filing content
+   */
+  private extractBusinessSection(content: string, metadata: any): Section | null {
+    const businessPatterns = [
+      /ITEM\s+1[\.\s]+BUSINESS[\s\S]{1,3000}/i,
+      /business overview[\s\S]{1,2000}/i,
+      /our business[\s\S]{1,2000}/i
+    ];
+    
+    for (const pattern of businessPatterns) {
+      const match = content.match(pattern);
+      if (match) {
+        return {
+          id: `${metadata.accessionNumber}_business`,
+          title: 'Business Overview',
+          content: match[0].trim(),
+          sectionType: 'business_description',
+          order: 2,
+          metadata
+        };
+      }
+    }
+    
+    return null;
   }
 
   /**
