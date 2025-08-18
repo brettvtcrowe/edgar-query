@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import React from 'react';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -21,6 +22,38 @@ interface ChatResponse {
   error?: string;
   suggestion?: string;
   alternativeQueries?: string[];
+}
+
+// Component to render text with clickable URLs
+function MessageContent({ content }: { content: string }) {
+  // Regular expression to match URLs
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  
+  // Split content by URLs and create elements
+  const parts = content.split(urlRegex);
+  
+  return (
+    <>
+      {parts.map((part, index) => {
+        // Check if this part is a URL
+        if (part.match(urlRegex)) {
+          return (
+            <a
+              key={index}
+              href={part}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 hover:text-blue-800 underline break-all"
+            >
+              {part}
+            </a>
+          );
+        }
+        // Regular text
+        return <span key={index}>{part}</span>;
+      })}
+    </>
+  );
 }
 
 export default function HomePage() {
@@ -69,16 +102,7 @@ export default function HomePage() {
         // Use LLM-generated answer if available, otherwise fall back to formatted response
         if (result.answer) {
           assistantContent = result.answer;
-          
-          // Add metadata footer
-          let footer = '';
-          if (result.sources?.length) {
-            footer += `\n\n**Sources**: ${result.sources.map(s => s.type).join(', ')}`;
-          }
-          if (result.metadata?.executionTime) {
-            footer += `\n*Query completed in ${result.metadata.executionTime}ms*`;
-          }
-          assistantContent += footer;
+          // Don't add redundant sources or execution time - the answer should have everything
           
         } else {
           // Fallback to formatted metadata response
@@ -102,13 +126,7 @@ export default function HomePage() {
             });
           }
 
-          if (result.sources?.length) {
-            assistantContent += `\n**Data Sources**: ${result.sources.map(s => s.type).join(', ')}`;
-          }
-
-          if (result.metadata?.executionTime) {
-            assistantContent += `\n*Query completed in ${result.metadata.executionTime}ms*`;
-          }
+          // Don't add redundant sources or execution time
         }
 
       } else {
@@ -218,7 +236,13 @@ export default function HomePage() {
                     : 'bg-white border border-gray-200'
                 }`}
               >
-                <div className="whitespace-pre-wrap">{message.content}</div>
+                <div className="whitespace-pre-wrap">
+                  {message.role === 'assistant' ? (
+                    <MessageContent content={message.content} />
+                  ) : (
+                    message.content
+                  )}
+                </div>
                 <div className={`text-xs mt-2 ${message.role === 'user' ? 'text-blue-100' : 'text-gray-500'}`}>
                   {message.timestamp.toLocaleTimeString()}
                 </div>

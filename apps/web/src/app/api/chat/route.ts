@@ -149,6 +149,8 @@ Instructions:
 - Provide a clear, comprehensive answer based on the data
 - Include specific financial figures, dates, and filing references when available
 - Mention which SEC forms the information comes from (10-K, 10-Q, 8-K, etc.)
+- IMPORTANT: Include the SEC document URLs from the data above directly in your response
+- When mentioning a filing, include its URL so users can click to view the source
 - Be precise and factual - only use information from the provided data
 - Format financial numbers clearly (e.g., $123.4 billion)
 - If the data is incomplete, acknowledge limitations
