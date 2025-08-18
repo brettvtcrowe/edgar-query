@@ -204,12 +204,11 @@ function formatDataForLLM(result: any): string {
       if (filing.period) context += `   Period: ${filing.period}\n`;
       
       // Add direct SEC filing URL if we have accession number
-      if (filing.accessionNumber && data.company?.cik) {
+      if (filing.accessionNumber && data.company?.cik && filing.primaryDocument) {
         const cikNum = data.company.cik.replace(/^0+/, '');
         const accessionNoHyphens = filing.accessionNumber.replace(/-/g, '');
-        // Use primaryDocument if available, otherwise use accession number with .txt extension
-        const document = filing.primaryDocument || `${filing.accessionNumber}.txt`;
-        const filingUrl = `https://www.sec.gov/Archives/edgar/data/${cikNum}/${accessionNoHyphens}/${document}`;
+        // primaryDocument is always provided by SEC API
+        const filingUrl = `https://www.sec.gov/Archives/edgar/data/${cikNum}/${accessionNoHyphens}/${filing.primaryDocument}`;
         context += `   URL: ${filingUrl}\n`;
       }
     });

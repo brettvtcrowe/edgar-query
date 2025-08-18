@@ -399,9 +399,8 @@ export class QueryOrchestrator {
                 if (filing.accessionNumber && cik) {
                   const cikNum = cik.replace(/^0+/, '');
                   const accessionNoHyphens = filing.accessionNumber.replace(/-/g, '');
-                  // Use primaryDocument if available, otherwise use accession number with .txt extension
-                  const document = filing.primaryDocument || `${filing.accessionNumber}.txt`;
-                  const filingUrl = `https://www.sec.gov/Archives/edgar/data/${cikNum}/${accessionNoHyphens}/${document}`;
+                  // primaryDocument is always provided by SEC API
+                  const filingUrl = `https://www.sec.gov/Archives/edgar/data/${cikNum}/${accessionNoHyphens}/${filing.primaryDocument}`;
                   
                   citations.push({
                     title: `${filing.form || 'Form'} - ${filing.filingDate}`,
