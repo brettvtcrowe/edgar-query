@@ -4,15 +4,19 @@
 
 Add these **exact values** to your Vercel dashboard:
 
-### 1. Railway Service Integration
+### 1. Google Cloud Run MCP Service Integration
 ```bash
-EDGAR_MCP_SERVICE_URL=https://edgar-query-production.up.railway.app
-EDGAR_MCP_API_KEY=edgar-mcp-8d9ec9252e76507b2ea650306f68d783
+# After deploying MCP to Google Cloud Run
+EDGAR_MCP_SERVICE_URL=https://edgar-mcp-XXXXXX-uc.a.run.app
+# Note: API key may not be needed for unauthenticated GCP service
 ```
 
-### 2. SEC Compliance (Required)
+### 2. SEC Compliance (Built into MCP)
 ```bash
-SEC_USER_AGENT=EdgarAnswerEngine/1.0 (brett.vantil@crowe.com)
+# SEC User-Agent is handled by the MCP service itself
+# No longer needed in Vercel environment variables
+# Configured during GCP deployment with:
+# SEC_EDGAR_USER_AGENT="EdgarAnswerEngine/2.0 (brett.vantil@crowe.com)"
 ```
 
 ### 3. Database (Already set)

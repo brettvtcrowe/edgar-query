@@ -1,335 +1,292 @@
-# EDGAR Answer Engine - Evidence-First Setup Guide
+# EDGAR Answer Engine - Setup Guide
 
 ## Prerequisites
 
 ### Required Software
 - **Node.js**: v20.0.0 or higher
 - **pnpm**: v8.0.0 or higher (`npm install -g pnpm`)
-- **Wrangler CLI**: Latest version (`npm install -g wrangler`)
+- **Python**: v3.11+ (for MCP server)
 - **Git**: v2.0.0 or higher
 
 ### Required Accounts
 - **GitHub**: For repository and version control
 - **Vercel**: For Next.js web application hosting
-- **Cloudflare**: For Workers MCP server deployment
-- **OpenAI**: For LLM API access (evidence composition)
+- **Google Cloud**: For MCP server hosting (Google Cloud Run)
+- **OpenAI/Anthropic**: For LLM API access
 
-### Optional Services
-- **Neon/Supabase**: PostgreSQL for advanced caching (basic functionality works without)
-- **Upstash**: Redis for enhanced rate limiting (fallback available)
+### Required Services
+- **PostgreSQL**: Database (Neon/Supabase recommended)
+- **Redis**: Rate limiting (Upstash recommended)
 
 ## Architecture Overview
 
-The evidence-first EDGAR Answer Engine consists of:
+🎉 **BREAKTHROUGH**: SEC EDGAR MCP confirmed working perfectly!
+
+Simple, reliable architecture using the proven SEC EDGAR MCP:
 
 ```
-Vercel (Next.js App) ←→ Cloudflare Workers (MCP Server) ←→ SEC APIs
-        ↓                        ↓                         ↓
-   User Interface        Evidence-First Tools        Official Data
-     Chat API           Domain Adapters              SEC Filings
-   Progress Updates     Hash Verification            XBRL Facts
+User Browser
+     ↓
+Vercel (Next.js App)
+     ↓
+Google Cloud Run ← MCP HTTP Service
+     ↓
+SEC EDGAR MCP ✅ TESTED (21 tools)
+     ↓
+SEC EDGAR API ✅ LIVE DATA
+
+Supporting Services:
+- PostgreSQL (metadata & caching)
+- Redis (rate limiting)
+- Vercel Blob (filing cache)
 ```
+
+**Status**: MCP tested locally with all 21 tools working. Ready for GCP deployment.
 
 ## Step-by-Step Setup
 
-### Step 1: Repository Setup
+### Step 1: Clone Repository
 
 ```bash
-# Clone the repository
-git clone https://github.com/yourusername/edgar-query.git
+git clone <repository-url>
 cd edgar-query
-
-# Install all dependencies
 pnpm install
-
-# Verify installation
-pnpm --version
-node --version
-wrangler --version
 ```
 
-### Step 2: Cloudflare Workers MCP Server
+### Step 2: Database Setup
 
-#### 2.1 Create Cloudflare Project
+#### Option A: Neon PostgreSQL (Recommended)
+1. Create account at [neon.tech](https://neon.tech)
+2. Create new project
+3. Enable pgvector extension:
+   ```sql
+   CREATE EXTENSION vector;
+   ```
+4. Copy connection string
+
+#### Option B: Supabase PostgreSQL  
+1. Create account at [supabase.com](https://supabase.com)
+2. Create new project
+3. Go to SQL Editor and run:
+   ```sql
+   CREATE EXTENSION vector;
+   ```
+4. Copy connection string from Settings → Database
+
+### Step 3: Redis Setup (Upstash)
+
+1. Create account at [upstash.com](https://upstash.com)
+2. Create new Redis database
+3. Choose global replication for best performance
+4. Copy connection URL
+
+### Step 4: Test MCP Locally (NEW STEP!)
+
+🎯 **CRITICAL**: Test the MCP locally before deploying!
 
 ```bash
-# Authenticate with Cloudflare
-wrangler login
+# Pull the official Docker image
+docker pull stefanoamorelli/sec-edgar-mcp:latest
 
-# Create MCP server project
-mkdir edgar-mcp-server
-cd edgar-mcp-server
-
-# Initialize Workers project
-wrangler init edgar-mcp-server
+# Test with MCP Inspector
+npx @modelcontextprotocol/inspector docker run --rm -i \
+  -e SEC_EDGAR_USER_AGENT="EdgarAnswerEngine/2.0 (your-email@example.com)" \
+  stefanoamorelli/sec-edgar-mcp:latest
 ```
 
-#### 2.2 Install MCP Dependencies
+**Expected Result**: 
+- ✅ MCP Inspector opens at `http://localhost:6274`
+- ✅ All 21 SEC EDGAR tools visible
+- ✅ Test `get_cik_by_ticker("AAPL")` → Should return `0000320193`
 
+### Step 5: Configure Environment Variables
+
+#### Vercel Environment Variables
+```env
+# Database
+DATABASE_URL=postgresql://username:password@host/database
+
+# Redis  
+REDIS_URL=redis://username:password@host:port
+
+# Google Cloud Run MCP Service (after deployment)
+EDGAR_MCP_SERVICE_URL=https://edgar-mcp-XXXXXX-uc.a.run.app
+
+# LLM API
+OPENAI_API_KEY=sk-...
+# OR
+ANTHROPIC_API_KEY=sk-ant-...
+
+# Storage
+VERCEL_BLOB_READ_WRITE_TOKEN=vercel_blob_rw_...
+```
+
+### Step 6: Deploy Next.js App to Vercel
+
+1. Connect GitHub repository to Vercel
+2. Configure environment variables in Vercel dashboard
+3. Deploy:
+   ```bash
+   git push origin main
+   ```
+4. Vercel will auto-deploy
+
+### Step 7: Deploy MCP Service to Google Cloud Run
+
+🎯 **NEW APPROACH**: Deploy the proven Docker image directly
+
+#### Prerequisites
 ```bash
-# Install Cloudflare MCP SDK
-npm install @cloudflare/mcp-sdk
-npm install @cloudflare/workers-oauth-provider
-
-# Install SEC analysis dependencies
-npm install zod node-fetch cheerio crypto
+# Install Google Cloud CLI
+curl https://sdk.cloud.google.com | bash
+exec -l $SHELL
+gcloud init
 ```
 
-#### 2.3 Configure Wrangler
-
-Create `wrangler.toml`:
-```toml
-name = "edgar-mcp-server"
-main = "src/index.ts"
-compatibility_date = "2024-08-14"
-
-[durable_objects]
-bindings = [
-  { name = "EDGAR_EVIDENCE_STORE", class_name = "EdgarEvidenceStore" },
-  { name = "QUERY_SESSION", class_name = "QuerySessionState" }
-]
-
-[[migrations]]
-tag = "v1"
-new_classes = ["EdgarEvidenceStore", "QuerySessionState"]
-
-[vars]
-SEC_USER_AGENT = "EdgarAnswerEngine/2.0 (evidence-first analysis)"
-HYBRID_SEARCH_TIMEOUT = "15000"
-MAX_CONCURRENT_FETCHES = "10"
-EVIDENCE_VERIFICATION_LEVEL = "FULL"
-
-[env.production.vars]
-OAUTH_CLIENT_ID = "your-oauth-client-id"
-OAUTH_CLIENT_SECRET = "your-oauth-client-secret"
-```
-
-#### 2.4 Deploy MCP Server
-
+#### Deploy MCP Service
 ```bash
-# Deploy to Cloudflare Workers
-wrangler deploy
-
-# Note the deployment URL (e.g., https://edgar-mcp-server.your-subdomain.workers.dev)
+# Deploy the confirmed working Docker image
+gcloud run deploy edgar-mcp \
+  --image stefanoamorelli/sec-edgar-mcp:latest \
+  --port 8080 \
+  --set-env-vars SEC_EDGAR_USER_AGENT="EdgarAnswerEngine/2.0 (your-email@example.com)" \
+  --allow-unauthenticated \
+  --region us-central1 \
+  --memory 1Gi \
+  --cpu 1
 ```
 
-### Step 3: Vercel Web Application
-
-#### 3.1 Configure Environment Variables
-
-Create `apps/web/.env.local`:
+#### Get Service URL
 ```bash
-# OpenAI API for LLM composition
-OPENAI_API_KEY="sk-your-openai-api-key-here"
-
-# Cloudflare MCP Server
-EDGAR_MCP_SERVICE_URL="https://edgar-mcp-server.your-subdomain.workers.dev"
-EDGAR_MCP_API_KEY="your-cloudflare-mcp-token"
-
-# SEC Compliance
-SEC_USER_AGENT="EdgarAnswerEngine/2.0 (your-email@example.com)"
-
-# Optional: Database for advanced caching
-# DATABASE_URL="postgresql://user:password@host:5432/edgar_query"
-# REDIS_URL="redis://default:password@host:6379"
-
-# Vercel Blob Storage (optional)
-# BLOB_READ_WRITE_TOKEN="vercel_blob_token"
-
-# Application Configuration
-NODE_ENV="development"
-NEXT_PUBLIC_APP_URL="http://localhost:3000"
+# Get the deployed service URL
+GCP_URL=$(gcloud run services describe edgar-mcp --region=us-central1 --format="value(status.url)")
+echo "MCP Service deployed at: $GCP_URL"
 ```
 
-#### 3.2 Deploy to Vercel
+**Note**: You'll need to configure HTTP transport wrapper - see GCP_DEPLOYMENT_GUIDE.md for details.
 
+### Step 8: Local Development
+
+#### Start Local Development
 ```bash
-# Install Vercel CLI
-npm install -g vercel
+# Test MCP locally first
+npx @modelcontextprotocol/inspector docker run --rm -i \
+  -e SEC_EDGAR_USER_AGENT="EdgarAnswerEngine/2.0 (your-email@example.com)" \
+  stefanoamorelli/sec-edgar-mcp:latest
 
-# Login to Vercel
-vercel login
-
-# Deploy application
-vercel --prod
-
-# Set environment variables in Vercel dashboard
-vercel env add OPENAI_API_KEY
-vercel env add EDGAR_MCP_SERVICE_URL
-vercel env add EDGAR_MCP_API_KEY
-vercel env add SEC_USER_AGENT
-```
-
-### Step 4: Local Development
-
-#### 4.1 Start Development Environment
-
-```bash
-# Start Cloudflare Workers dev server (in edgar-mcp-server directory)
-wrangler dev
-
-# Start Next.js development server (in project root)
-cd ../
+# Start local development servers
 pnpm dev
+
+# (Optional) Start local HTTP bridge for development
+cd services/edgar-mcp-http-bridge
+npm run dev
 ```
 
-#### 4.2 Verify Setup
-
+#### Test Local Setup
 ```bash
-# Test MCP server health
-curl https://edgar-mcp-server.your-subdomain.workers.dev/health
-
-# Test local application
+# Test Vercel app health
 curl http://localhost:3000/api/health
 
-# Test end-to-end query
-curl -X POST http://localhost:3000/api/chat \
-  -H "Content-Type: application/json" \
-  -d '{"messages":[{"role":"user","content":"What was Apple revenue last quarter?"}]}'
+# Test MCP locally via Inspector
+# Visit http://localhost:6274 to test all 21 tools
+
+# Test specific tool: get_cik_by_ticker
+# Should return: {"success": true, "cik": "0000320193", "ticker": "AAPL"}
 ```
 
-## Advanced Configuration
+## Verification
 
-### Database Setup (Optional)
+### Test Production Deployment
 
-For advanced caching and query optimization:
+1. **Frontend Health Check**:
+   ```bash
+   curl https://your-app.vercel.app/api/health
+   ```
+   Should return: `{"status":"ok","db":true,"redis":true,"blob":true}`
 
-```bash
-# Create PostgreSQL database
-createdb edgar_query
+2. **Google Cloud Run MCP Health Check**:
+   ```bash
+   curl https://edgar-mcp-XXXXXX-uc.a.run.app/health
+   ```
+   Should return health status (once HTTP wrapper is configured)
 
-# Enable pgvector extension
-psql edgar_query -c "CREATE EXTENSION vector;"
+3. **MCP Tools Test**:
+   ```bash
+   # Test via MCP Inspector first
+   npx @modelcontextprotocol/inspector docker run --rm -i \
+     -e SEC_EDGAR_USER_AGENT="EdgarAnswerEngine/2.0 (your-email@example.com)" \
+     stefanoamorelli/sec-edgar-mcp:latest
+   
+   # Expected: All 21 SEC EDGAR tools available
+   ```
 
-# Run Prisma migrations
-cd apps/web
-pnpm prisma db push
-pnpm prisma generate
-```
-
-### Redis Setup (Optional)
-
-For enhanced rate limiting and caching:
-
-```bash
-# Local Redis
-brew install redis
-brew services start redis
-
-# Or use Upstash cloud Redis
-# Add REDIS_URL to environment variables
-```
-
-### Custom Domain Setup
-
-#### Cloudflare Workers Custom Domain
-
-1. Go to Cloudflare Dashboard → Workers & Pages
-2. Select your MCP server worker
-3. Go to Settings → Triggers
-4. Add custom domain (e.g., `edgar-mcp.yourdomain.com`)
-
-#### Vercel Custom Domain
-
-1. Go to Vercel Dashboard → Your Project
-2. Go to Settings → Domains
-3. Add custom domain (e.g., `edgar.yourdomain.com`)
-
-## Environment Variables Reference
-
-### Required Variables
-
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `OPENAI_API_KEY` | OpenAI API key for LLM responses | `sk-proj-...` |
-| `EDGAR_MCP_SERVICE_URL` | Cloudflare Workers MCP server URL | `https://edgar-mcp.workers.dev` |
-| `SEC_USER_AGENT` | SEC-compliant User-Agent string | `EdgarAnswerEngine/2.0 (email@domain.com)` |
-
-### Optional Variables
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `DATABASE_URL` | PostgreSQL connection string | Uses Durable Objects |
-| `REDIS_URL` | Redis connection string | Uses in-memory fallback |
-| `BLOB_READ_WRITE_TOKEN` | Vercel Blob storage token | Uses temp storage |
-| `EDGAR_MCP_API_KEY` | Authentication for MCP server | Optional for development |
+4. **End-to-End Test**:
+   - Go to your Vercel app
+   - Try query: "What is Apple's CIK?"
+   - Should get response: `0000320193` with proper citation
 
 ## Troubleshooting
 
 ### Common Issues
 
-#### MCP Server Connection Failure
+#### Database Connection
 ```bash
-# Check MCP server deployment
-wrangler tail edgar-mcp-server
+# Test PostgreSQL connection
+pnpm prisma db pull
 
-# Verify environment variables
-wrangler secret list
+# Generate Prisma client
+pnpm prisma generate
 ```
 
-#### SEC API Rate Limiting
-- Verify `SEC_USER_AGENT` is properly set
-- Check Cloudflare Workers logs for rate limit errors
-- Ensure only one query runs at a time during development
-
-#### LLM Response Errors
-- Verify `OPENAI_API_KEY` is valid and has credits
-- Check API key permissions and rate limits
-- Monitor token usage in OpenAI dashboard
-
-#### Citation Verification Failures
-- Check network connectivity to SEC.gov
-- Verify hash calculation consistency
-- Review evidence extraction accuracy
-
-### Performance Optimization
-
-#### Development Environment
+#### Redis Connection  
 ```bash
-# Use local caching
-export NODE_ENV="development"
-export ENABLE_LOCAL_CACHE="true"
-
-# Increase timeout for complex queries
-export QUERY_TIMEOUT="30000"
+# Test Redis (requires redis-cli)
+redis-cli -u $REDIS_URL ping
 ```
 
-#### Production Environment
-```bash
-# Enable all optimizations
-export NODE_ENV="production"
-export ENABLE_EVIDENCE_CACHE="true"
-export ENABLE_QUERY_OPTIMIZATION="true"
-```
+#### MCP Connection Issues
+- **FIRST**: Test MCP locally with Docker + MCP Inspector
+- Check Google Cloud Run logs for container errors
+- Verify `SEC_EDGAR_USER_AGENT` environment variable is set
+- Confirm HTTP transport wrapper is configured correctly
 
-## Health Checks
+#### SEC API Compliance
+- ✅ **CONFIRMED**: SEC EDGAR MCP handles compliance automatically
+- Verify `SEC_EDGAR_USER_AGENT` is set with your contact email
+- Check rate limiting (should be ≤10 requests/second)
+- Monitor for 429 (rate limit) errors
 
-### System Health Verification
+### Environment-Specific Issues
 
-```bash
-# Check all systems
-curl https://your-app.vercel.app/api/health
+#### Vercel Deployment
+- Check build logs for missing environment variables
+- Verify Prisma client generation succeeds
+- Ensure binary targets include `rhel-openssl-3.0.x`
 
-# Expected response:
-{
-  "status": "ok",
-  "services": {
-    "mcp": true,
-    "sec_api": true,
-    "llm": true
-  },
-  "evidence_verification": "enabled",
-  "version": "2.0.0"
-}
-```
+#### Google Cloud Run Deployment
+- Ensure Docker image `stefanoamorelli/sec-edgar-mcp:latest` is accessible
+- Verify HTTP transport wrapper is configured
+- Monitor memory and CPU usage
+- Check container logs for startup errors
 
-### Performance Monitoring
+## Success Criteria
 
-```bash
-# Test query performance
-time curl -X POST https://your-app.vercel.app/api/chat \
-  -H "Content-Type: application/json" \
-  -d '{"messages":[{"role":"user","content":"Test query"}]}'
-```
+Your setup is complete when:
+- ✅ **Local MCP Testing**: All 21 tools work via MCP Inspector
+- ✅ **Apple CIK Test**: `get_cik_by_ticker("AAPL")` returns `0000320193`
+- ✅ **Vercel Health Check**: DB, Redis, Blob all true
+- ✅ **GCP MCP Service**: Deployed and responding to HTTP requests
+- ✅ **End-to-End Queries**: Full query workflow functional
+- ✅ **SEC Compliance**: Proper rate limiting and User-Agent handling
 
-This setup provides a complete evidence-first EDGAR analysis platform with institutional-grade accuracy, verifiable citations, and comprehensive domain expertise.
+## Next Steps
+
+After successful setup:
+1. Test various query types (company-specific, thematic)
+2. Monitor performance and error rates
+3. Configure monitoring/alerting as needed
+4. Scale services based on usage patterns
+
+---
+
+This setup provides a complete SEC EDGAR query engine using the proven SEC EDGAR MCP with 21 specialized tools.

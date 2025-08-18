@@ -195,9 +195,19 @@ function formatDataForLLM(result: any): string {
   if (data.filings && data.filings.length > 0) {
     context += 'Recent SEC Filings:\n';
     data.filings.slice(0, 10).forEach((filing: any, index: number) => {
-      context += `${index + 1}. Form ${filing.formType} - Filed ${filing.filingDate}\n`;
+      // Fix: Use 'form' instead of 'formType'
+      const formType = filing.form || filing.formType || 'Unknown Form';
+      context += `${index + 1}. Form ${formType} - Filed ${filing.filingDate}\n`;
       if (filing.reportDate) context += `   Report Date: ${filing.reportDate}\n`;
       if (filing.period) context += `   Period: ${filing.period}\n`;
+      
+      // Add direct SEC filing URL if we have accession number
+      if (filing.accessionNumber && data.company?.cik) {
+        const cikNum = data.company.cik.replace(/^0+/, '');
+        const accessionNoHyphens = filing.accessionNumber.replace(/-/g, '');
+        const filingUrl = `https://www.sec.gov/Archives/edgar/data/${cikNum}/${accessionNoHyphens}/${filing.primaryDocument || filing.accessionNumber + '.txt'}`;
+        context += `   URL: ${filingUrl}\n`;
+      }
     });
     context += '\n';
   }
@@ -261,7 +271,8 @@ function formatDataAsText(result: any): string {
     
     if (data.filings?.length) {
       response += `Recent filings include ${data.filings.length} SEC forms. `;
-      response += `The most recent filing is a ${data.filings[0].formType} filed on ${data.filings[0].filingDate}.`;
+      const formType = data.filings[0].form || data.filings[0].formType || 'form';
+      response += `The most recent filing is a ${formType} filed on ${data.filings[0].filingDate}.`;
     }
     
     return response;

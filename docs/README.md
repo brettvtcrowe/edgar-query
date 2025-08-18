@@ -18,11 +18,9 @@
 - **[UX_DESIGN_SPECIFICATION.md](./UX_DESIGN_SPECIFICATION.md)** - UI/UX design system
 
 ### 🚢 Deployment & Operations
-- **[MVP_DEPLOYMENT_GUIDE.md](./MVP_DEPLOYMENT_GUIDE.md)** - MVP deployment instructions
-- **[VERCEL_SETUP.md](./VERCEL_SETUP.md)** - Vercel deployment configuration
-- **[RAILWAY_DEPLOYMENT.md](./RAILWAY_DEPLOYMENT.md)** - Railway service deployment
-- **[RAILWAY_TROUBLESHOOTING.md](./RAILWAY_TROUBLESHOOTING.md)** - Railway troubleshooting guide
-- **[EDGAR_MCP_DEPLOYMENT_PLAN.md](./EDGAR_MCP_DEPLOYMENT_PLAN.md)** - MCP integration deployment strategy
+- **[GCP_DEPLOYMENT_GUIDE.md](./GCP_DEPLOYMENT_GUIDE.md)** - Google Cloud Run deployment (CURRENT)
+- **[VERCEL_SETUP.md](./VERCEL_SETUP.md)** - Vercel frontend configuration
+- **[MCP_TESTING_SUCCESS.md](./MCP_TESTING_SUCCESS.md)** - Local MCP testing and verification
 
 ### 🧪 Testing & Validation
 - **[MVP_TESTING.md](./MVP_TESTING.md)** - MVP testing procedures

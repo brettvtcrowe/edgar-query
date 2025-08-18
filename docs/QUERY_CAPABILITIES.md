@@ -1,244 +1,244 @@
-# EDGAR Answer Engine - Evidence-First Query Capabilities
+# EDGAR Answer Engine - Query Capabilities
 
 ## Overview
 
-The EDGAR Answer Engine provides institutional-grade analysis capabilities through evidence-first query processing. Every response is backed by verifiable citations, hash-verified evidence, and domain-specific expertise, making it suitable for professional financial analysis, regulatory compliance, and academic research.
+The EDGAR Answer Engine provides access to SEC EDGAR filings through 21 specialized MCP tools built by stefanoamorelli. Each query is processed using these proven tools to provide accurate, cited responses directly from official SEC data.
 
-## 🎯 Evidence-First Query Philosophy
+## 🛠️ Available MCP Tools (21 Total)
 
-### Core Principles
-- **Every claim backed by evidence**: Specific filing, section, character offset
-- **Zero speculation**: No evidence = no claim; system refuses unsupported statements  
-- **Hash-verified citations**: All evidence cross-checked against official SEC text
-- **Deterministic execution**: LLM plans → tools execute → LLM composes from evidence
-- **Domain expertise**: Form-specific parsing, accounting lexicon, event correlation
+### Company Information Tools
 
-## 🚀 Institutional-Grade Query Capabilities
-
-### 1. Company-Specific Financial Analysis
-**Performance**: <3 seconds with XBRL verification  
-**Evidence Level**: Hash-verified with numeric cross-validation
-
-#### Basic Financial Queries
+#### `get_cik_by_ticker`
+**Purpose**: Convert stock ticker to SEC CIK identifier  
+**Example Query**: "What is Apple's CIK?"
 ```
-"What was Apple's revenue last quarter?"
-→ discover_filings(cik="AAPL", form="10-Q", latest=true)
-→ extract_numeric_facts(metric="revenue", period="quarterly")
-→ verify_against_xbrl(revenue_figure)
-→ Evidence: 10-Q filing, specific XBRL tag, narrative confirmation
+Input: ticker="AAPL"
+Output: {"cik": "0000320193", "name": "Apple Inc."}
 ```
 
-#### Risk Factor Analysis
+#### `get_company_info`
+**Purpose**: Get comprehensive company details  
+**Example Query**: "Tell me about Microsoft as a company"
 ```
-"What are Tesla's main risk factors in their latest 10-K?"
-→ discover_filings(cik="TSLA", form="10-K", latest=true)
-→ sectionize_10k(sections=["Item_1A"])
-→ extract_risk_categories(section="risk_factors")
-→ Evidence: 10-K Item 1A text with exact offsets and categorization
-```
-
-#### Performance Metrics Analysis
-```
-"How does Microsoft describe their segment performance?"
-→ discover_filings(cik="MSFT", form="10-K", latest=true)
-→ sectionize_10k(sections=["Item_8", "MD&A"])
-→ extract_segment_data(include_narrative=true)
-→ Evidence: Financial statements + MD&A discussion with segment breakdowns
+Input: cik="0000789019" 
+Output: Company name, business description, industry, address, etc.
 ```
 
-### 2. Regulatory Compliance Analysis
-**Performance**: <15 seconds for complex correlation  
-**Evidence Level**: Full verification with regulatory cross-referencing
-
-#### Restatement Detection & Analysis
+#### `search_companies`
+**Purpose**: Search for companies by name or partial ticker  
+**Example Query**: "Find companies with 'Tesla' in the name"
 ```
-"Find all 8-K Item 4.02 restatements related to ASC 606 principal vs agent issues (3 years)"
-→ discover_filings(form="8-K", items=["4.02"], date_range="3y")
-→ hybrid_search(terms=["revenue recognition", "principal vs agent", "ASC 606"])
-→ detect_accounting_events(asc_topics=["ASC_606"])
-→ extract_restatement_reasons(confidence_min=0.8)
-→ tabulate_results(columns=["company", "date", "reason", "filing_url", "evidence_offset"])
-
-Expected Output:
-| Company | Date | Reason | Filing URL | Evidence |
-|---------|------|--------|------------|----------|
-| ABC Corp | 2024-03-15 | ASC 606 principal vs agent determination | SEC link | Hash-verified text excerpt |
+Input: query="Tesla"
+Output: List of matching companies with CIKs and tickers
 ```
 
-#### SEC Comment Letter Analysis
-```
-"Analyze SEC comment letters to crypto companies on revenue recognition themes"
-→ classify_industry(industry="cryptocurrency", method="sic_code + business_description")
-→ discover_filings(form=["UPLOAD", "CORRESP"], companies=crypto_list)
-→ parse_comment_letters(extract_qa_pairs=true)
-→ hybrid_search(terms=["revenue recognition", "digital assets", "cryptocurrency"])
-→ analyze_sec_themes(topic="revenue_recognition")
+### Filing Access Tools
 
-Expected Output:
-- SEC concerns: Fair value measurement of crypto, revenue timing
-- Company responses: Policy justifications, precedent citations
-- Common themes: Digital asset classification, exchange transaction accounting
-- Resolution status: Ongoing discussions vs closed matters
+#### `get_recent_filings`
+**Purpose**: Get recent SEC filings for a company  
+**Example Query**: "Show me Apple's recent 10-K filings"
+```
+Input: cik="0000320193", form="10-K", limit=5
+Output: List of recent filings with dates and accession numbers
 ```
 
-### 3. Accounting Standards Expertise
-**Performance**: <10 seconds for policy extraction  
-**Evidence Level**: ASC code verification with policy text
-
-#### Revenue Recognition Method Analysis
+#### `get_filing_content`
+**Purpose**: Get full text or HTML content of a specific filing  
+**Example Query**: "Get the full text of Apple's latest 10-K"
 ```
-"Which life sciences companies use milestone method for revenue recognition?"
-→ classify_industry(industry="life_sciences", filter_method="sic + business_description")
-→ discover_filings(form=["10-K", "10-Q"], companies=life_sciences_list)
-→ sectionize_accounting_policies(extract_revenue_methods=true)
-→ detect_milestone_method(patterns=["development milestones", "regulatory approval"])
-→ tabulate_results(include_evidence_excerpts=true)
-
-Expected Output:
-| Company | Revenue Method | Evidence | Filing | Confidence |
-|---------|---------------|----------|--------|------------|
-| BioPharma Inc | Milestone Method | "recognize revenue upon achievement of substantive milestones..." | 10-K 2024 | 0.95 |
+Input: cik="0000320193", accession="0000320193-23-000006"
+Output: Complete filing text with proper formatting
 ```
 
-#### ASC Topic Change Tracking
+#### `get_filing_sections`
+**Purpose**: Extract specific sections from SEC filings  
+**Example Query**: "Show me the risk factors from Tesla's latest 10-K"
 ```
-"Compare Microsoft's revenue recognition policies across last 5 years with change highlights"
-→ discover_filings(cik="MSFT", form="10-K", years=5)
-→ extract_accounting_policies(section="revenue_recognition")
-→ track_policy_changes(compare_year_over_year=true)
-→ detect_asc_references(codes=["ASC_606"])
-→ highlight_differences(method="semantic_diff")
-
-Expected Output:
-- 2020-2021: Adoption of ASC 606 with transition disclosures
-- 2022-2023: No material changes, consistent application
-- 2024: Enhanced disclosures for performance obligations
-- Evidence: Specific policy text with exact changes highlighted
+Input: cik="0000789019", accession="...", sections=["risk_factors"]
+Output: Extracted section content with references
 ```
 
-### 4. Corporate Event Correlation
-**Performance**: <15 seconds for temporal analysis  
-**Evidence Level**: Multi-filing correlation with confidence scoring
-
-#### Acquisition-Segment Change Analysis
+#### `analyze_8k`
+**Purpose**: Analyze 8-K current report filings for events  
+**Example Query**: "What events were reported in Microsoft's recent 8-K?"
 ```
-"Show segment changes within 12 months of acquisitions with correlation analysis"
-→ detect_acquisitions(sources=["8-K_2.01", "10-K_business_section"])
-→ link_temporal_events(event_type="segment_change", window="12_months")
-→ correlate_events(correlation_type="causal", confidence_min=0.7)
-→ extract_business_rationale(from_md_a=true)
-
-Expected Output:
-| Acquisition | Date | Segment Change | Time Delta | Confidence | Business Rationale |
-|-------------|------|----------------|------------|------------|-------------------|
-| ABC acquires XYZ | 2023-06-15 | New "Digital Services" segment | 8.5 months | 0.85 | "reflects acquired capabilities" |
+Input: cik="0000789019", accession="..."
+Output: Event analysis with item numbers and descriptions
 ```
 
-#### Failed Sale Analysis (ASC 860)
-```
-"Identify failed sales under ASC 860 across financial services companies"
-→ classify_industry(industry="financial_services")
-→ discover_filings(form=["10-K", "10-Q"], companies=financial_services_list)
-→ analyze_failed_sales(asc_code="ASC_860")
-→ detect_factoring_arrangements(include_recourse_analysis=true)
-→ extract_continuing_involvement(assess_control_transfer=true)
+### Financial Data Tools
 
-Expected Output:
-- Failed sale accounting identified for receivables transfers
-- Recourse provisions preventing sale accounting
-- Continuing involvement assessments
-- Evidence: Specific note disclosures with ASC 860 references
+#### `get_financials`
+**Purpose**: Extract XBRL financial statements  
+**Example Query**: "What was Apple's revenue last quarter?"
+```
+Input: cik="0000320193", period="quarterly"
+Output: Revenue, expenses, net income with exact figures and periods
 ```
 
-### 5. Advanced Industry Analysis
-**Performance**: <20 seconds for cross-industry comparison  
-**Evidence Level**: Industry-specific pattern recognition
-
-#### Technology Sector AI Investment Analysis
+#### `get_key_metrics`
+**Purpose**: Calculate key financial metrics  
+**Example Query**: "Show me Google's key financial metrics"
 ```
-"Compare AI investment strategies across major tech companies from their filings"
-→ classify_industry(industry="technology", size="large_cap")
-→ discover_filings(form=["10-K", "10-Q"], companies=tech_giants)
-→ hybrid_search(terms=["artificial intelligence", "machine learning", "AI research"])
-→ extract_investment_disclosures(capex=true, rd_expense=true)
-→ correlate_strategy_mentions(competitive_analysis=true)
-
-Expected Output:
-- Investment amounts: R&D spending on AI/ML initiatives
-- Strategic focus: Product integration vs platform development
-- Risk factors: AI-related competitive risks and regulatory concerns
-- Evidence: MD&A discussions, segment reporting, risk factor analysis
+Input: cik="0001652044"
+Output: P/E ratio, revenue growth, margins, etc.
 ```
 
-#### Climate Change Disclosure Evolution
+#### `get_segment_data`
+**Purpose**: Get business segment breakdown  
+**Example Query**: "What are Amazon's business segments?"
 ```
-"Track climate change risk disclosures across energy companies over 5 years"
-→ classify_industry(industry="energy", include_renewables=true)
-→ discover_filings(form="10-K", years=5, companies=energy_list)
-→ temporal_analysis(topic="climate_change", track_evolution=true)
-→ extract_risk_progression(quantify_disclosure_expansion=true)
-
-Expected Output:
-- Disclosure evolution: From minimal mentions to detailed risk assessments
-- Regulatory impact: SEC climate rule influence on disclosure quality
-- Quantitative metrics: Carbon emissions, renewable investments
-- Evidence: Year-over-year risk factor changes with specific text evolution
+Input: cik="0001018724"
+Output: Segment revenue, operating income by business unit
 ```
 
-## 📊 Query Performance Specifications
+#### `compare_financials`
+**Purpose**: Compare financial data across periods  
+**Example Query**: "Compare Apple's Q3 2024 vs Q3 2023 financials"
+```
+Input: cik="0000320193", periods=["2024-Q3", "2023-Q3"]
+Output: Side-by-side comparison with changes highlighted
+```
 
-### Latency Targets by Complexity
-| Query Type | Target Latency | Evidence Sources | Verification Level |
-|------------|----------------|------------------|-------------------|
-| Basic company facts | <3s | XBRL + narrative | Hash verified |
-| Risk factor analysis | <5s | 10-K Item 1A | Full text verification |
-| Complex correlation | <15s | Multi-form analysis | Sampled verification |
-| Industry comparison | <20s | Cross-company search | Pattern verification |
-| Temporal analysis | <18s | Multi-year analysis | Trend verification |
+### Insider Trading Tools (10+ specialized tools)
 
-### Accuracy Guarantees
-- **Citation Accuracy**: 95%+ verified against official SEC text
-- **Evidence Coverage**: 90%+ recall@5 for domain queries  
-- **Temporal Precision**: 95%+ accurate date/period matching
-- **Numeric Accuracy**: 99.9% for XBRL-backed financial data
-- **False Positive Rate**: <2% for claimed correlations
+#### `get_insider_trades`
+**Purpose**: Get recent insider trading activity  
+**Example Query**: "Show me recent insider trades for Tesla"
+```
+Input: cik="0000789019", days=90
+Output: Insider transactions with dates, amounts, and relationships
+```
 
-## 🛡️ Evidence Quality Standards
+#### `analyze_insider_sentiment`
+**Purpose**: Analyze patterns in insider trading  
+**Example Query**: "What's the insider sentiment for Netflix?"
+```
+Input: cik="0000789019"
+Output: Buy/sell ratios, trend analysis, significant transactions
+```
 
-### Citation Requirements
-Every response includes:
-- **Direct SEC.gov links** with exact document references
-- **Character offsets** for precise text location
-- **Hash verification** of quoted content
-- **Filing metadata** (accession number, filing date, form type)
-- **Confidence scoring** for evidence quality
+Plus 8 additional specialized insider trading analysis tools for comprehensive coverage.
 
-### Verification Process
-1. **Hash Calculation**: SHA-256 of exact quoted text
-2. **Offset Validation**: Character positions in original filing
-3. **Cross-Reference**: Multiple sources for critical claims
-4. **Temporal Logic**: Date consistency across related events
-5. **Domain Validation**: SEC form and accounting standard compliance
+## 🚀 Query Types Supported
 
-### Quality Guardrails
-- **No Evidence = No Claim**: System refuses unsupported statements
-- **Speculation Detection**: Flags and rejects uncertain language
-- **Numeric Cross-Check**: XBRL validation for financial figures
-- **Source Authority**: Prioritizes official filings over press releases
-- **Temporal Consistency**: Validates date logic and relationships
+### 1. Company-Specific Queries
+**Performance**: 1-3 seconds  
+**Data Source**: Direct from SEC EDGAR
 
-## 🔄 Continuous Improvement
+**Examples**:
+- "What is Apple's CIK number?"
+- "Show me Microsoft's latest 10-K filing"
+- "What was Tesla's revenue last quarter?"
+- "Get Google's risk factors from their annual report"
+- "Show me Amazon's business segments"
 
-### Learning from Queries
-- **Pattern Recognition**: Identify successful query structures
-- **Error Analysis**: Root cause analysis for failed queries
-- **User Feedback**: Incorporate corrections into knowledge base
-- **Domain Expansion**: Add new accounting standards and SEC rules
+### 2. Financial Analysis Queries
+**Performance**: 2-5 seconds  
+**Data Source**: XBRL financial data + narrative sections
 
-### Evaluation Framework
-- **Gold Standard Datasets**: Curated test cases for each capability
-- **Regression Testing**: Daily validation against known correct answers
-- **Performance Monitoring**: Real-time tracking of accuracy metrics
-- **A/B Testing**: Systematic evaluation of improvements
+**Examples**:
+- "Compare Apple's Q3 2024 vs Q3 2023 financials"
+- "What are Microsoft's key financial metrics?"
+- "Show me Tesla's quarterly revenue trend"
+- "What's Amazon's operating margin by segment?"
 
-This evidence-first approach ensures that the EDGAR Answer Engine provides institutional-grade analysis suitable for professional financial analysis, regulatory compliance, audit work, and academic research with complete auditability and verification.
+### 3. Filing Content Queries
+**Performance**: 1-3 seconds  
+**Data Source**: Full SEC filing text
+
+**Examples**:
+- "Extract the business description from Apple's 10-K"
+- "Show me the MD&A section from Microsoft's latest quarterly report"
+- "What events were disclosed in Tesla's recent 8-K?"
+- "Get the full text of Amazon's proxy statement"
+
+### 4. Insider Trading Queries
+**Performance**: 2-4 seconds  
+**Data Source**: SEC insider trading forms
+
+**Examples**:
+- "Show me recent insider trades for Apple"
+- "What's the insider sentiment for Tesla stock?"
+- "Who are the major insider sellers at Microsoft?"
+- "Analyze insider trading patterns for Google"
+
+### 5. Discovery and Search Queries
+**Performance**: 3-8 seconds  
+**Data Source**: SEC filing metadata
+
+**Examples**:
+- "Find all companies in the technology sector"
+- "Show me recent 10-K filings from automotive companies"
+- "Which companies filed 8-K reports this week?"
+- "Search for companies mentioning 'artificial intelligence'"
+
+## 📋 Response Format
+
+All responses include:
+- **Direct answer** based on SEC data
+- **Source citation** with filing type and date
+- **Accession number** for verification
+- **Direct SEC.gov link** to original filing
+- **Data extraction date** for currency
+
+### Example Response Format:
+```
+Based on Apple Inc.'s Form 10-Q filed on August 3, 2024:
+
+Apple reported net sales of $85.78 billion for Q3 2024, compared to $81.80 billion in Q3 2023, representing a 5% increase year-over-year.
+
+Source: Form 10-Q (Accession: 0000320193-24-000073)
+Filed: August 3, 2024
+Verify at: https://sec.gov/Archives/edgar/data/320193/000032019324000073/aapl-20240630.htm
+```
+
+## ⚡ Performance Characteristics
+
+| Query Type | Typical Response Time | Data Freshness |
+|------------|----------------------|----------------|
+| Company lookup | 1-2 seconds | Real-time |
+| Recent filings | 2-3 seconds | Same day |
+| Financial data | 2-5 seconds | Filing date |
+| Full filing content | 3-8 seconds | Official SEC |
+| Insider trades | 2-4 seconds | 1-2 days |
+| Cross-company search | 5-15 seconds | Same day |
+
+## 🔒 Compliance & Reliability
+
+### SEC API Compliance
+- **User-Agent**: Properly identified with contact information
+- **Rate Limiting**: Maximum 10 requests/second to SEC APIs
+- **Caching**: Respectful caching to minimize API load
+- **Direct Access**: No data mirroring, always current
+
+### Data Accuracy
+- **Official Source**: All data from official SEC EDGAR database
+- **No Interpretation**: Raw data presented without analysis bias
+- **Verification Links**: Every response includes SEC.gov link for verification
+- **Exact Precision**: Financial figures presented exactly as filed
+
+### Error Handling
+- Clear error messages when data unavailable
+- Graceful degradation if SEC APIs are temporarily unavailable
+- Automatic retry with exponential backoff
+- Fallback to cached data when appropriate
+
+## 📈 Supported Filing Types
+
+The MCP tools support comprehensive analysis of:
+
+- **10-K**: Annual reports
+- **10-Q**: Quarterly reports  
+- **8-K**: Current reports (events)
+- **DEF 14A**: Proxy statements
+- **Form 4**: Insider trading reports
+- **Form 3/5**: Initial insider reports
+- **S-1**: Registration statements
+- **424B**: Prospectuses
+
+Plus many other SEC form types as supported by the underlying MCP server.
+
+---
+
+**Note**: All capabilities are provided through the SEC EDGAR MCP by stefanoamorelli. No custom tools or advanced features are implemented beyond these 21 proven MCP tools.

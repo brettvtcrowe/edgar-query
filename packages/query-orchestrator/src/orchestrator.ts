@@ -391,6 +391,27 @@ export class QueryOrchestrator {
               type: this.edgarClient.getDataSource() === 'MCP' ? 'mcp' : 'sec_api',
               timestamp: new Date().toISOString()
             });
+            
+            // Generate citations with proper SEC URLs for each filing
+            if (result && Array.isArray(result)) {
+              const cik = results.getCompanyInfo?.cik || step.params.identifier;
+              result.forEach(filing => {
+                if (filing.accessionNumber && cik) {
+                  const cikNum = cik.replace(/^0+/, '');
+                  const accessionNoHyphens = filing.accessionNumber.replace(/-/g, '');
+                  const filingUrl = `https://www.sec.gov/Archives/edgar/data/${cikNum}/${accessionNoHyphens}/${filing.primaryDocument || filing.accessionNumber + '.txt'}`;
+                  
+                  citations.push({
+                    title: `${filing.form || 'Form'} - ${filing.filingDate}`,
+                    url: filingUrl,
+                    form: filing.form,
+                    filingDate: filing.filingDate,
+                    accessionNumber: filing.accessionNumber,
+                    type: 'sec_filing'
+                  });
+                }
+              });
+            }
             break;
 
           case 'getFilingSections':
