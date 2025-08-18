@@ -207,7 +207,9 @@ function formatDataForLLM(result: any): string {
       if (filing.accessionNumber && data.company?.cik) {
         const cikNum = data.company.cik.replace(/^0+/, '');
         const accessionNoHyphens = filing.accessionNumber.replace(/-/g, '');
-        const filingUrl = `https://www.sec.gov/Archives/edgar/data/${cikNum}/${accessionNoHyphens}/${filing.primaryDocument || filing.accessionNumber + '.txt'}`;
+        // Use primaryDocument if available, otherwise use accession number with .txt extension
+        const document = filing.primaryDocument || `${filing.accessionNumber}.txt`;
+        const filingUrl = `https://www.sec.gov/Archives/edgar/data/${cikNum}/${accessionNoHyphens}/${document}`;
         context += `   URL: ${filingUrl}\n`;
       }
     });
