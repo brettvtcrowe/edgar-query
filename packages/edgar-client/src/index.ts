@@ -36,11 +36,17 @@ export class EDGARClient {
     }
     
     // Cache configuration
-    this.cacheEnabled = config.cacheEnabled !== false;
+    // VERSION 1.0: Disable cache to ensure fresh data
+    this.cacheEnabled = false; // config.cacheEnabled !== false;
     this.cacheTTL = config.cacheTTL || 300000; // 5 minutes default
     
-    // Check MCP availability on initialization
-    this.checkMCPAvailability();
+    // VERSION 1.0: Force SEC API usage for now (MCP returns stale data)
+    // TODO: Re-enable MCP in Version 2.0 after fixing data freshness
+    this.useMCP = false;
+    console.log('📊 Using direct SEC API for Version 1.0 (fresh data)');
+    
+    // Don't check MCP availability in V1
+    // this.checkMCPAvailability();
   }
 
   /**
