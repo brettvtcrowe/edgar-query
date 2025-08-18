@@ -1,25 +1,22 @@
 {
   "$schema": "https://railway.app/railway.schema.json",
   "build": {
-    "builder": "DOCKERFILE"
+    "builder": "NIXPACKS",
+    "buildCommand": "npm install && pip install -e ../../sec-edgar-mcp"
   },
   "deploy": {
-    "numReplicas": 1,
+    "startCommand": "npm start",
     "healthcheckPath": "/health",
-    "healthcheckTimeout": 3,
     "restartPolicyType": "ON_FAILURE",
-    "restartPolicyMaxRetries": 3,
-    "sleepApplication": false,
-    "minInstances": 1,
-    "maxInstances": 3
+    "restartPolicyMaxRetries": 3
   },
   "envVars": {
     "PORT": {
       "description": "Port for the HTTP server",
-      "default": "3001"
+      "default": "3002"
     },
-    "SEC_EDGAR_USER_AGENT": {
-      "description": "User agent for SEC compliance",
+    "SEC_USER_AGENT": {
+      "description": "User agent for SEC compliance - UPDATED to match new env var name",
       "required": true
     },
     "API_KEY": {
@@ -35,9 +32,9 @@
       "description": "Node environment",
       "default": "production"
     },
-    "DOCKER_HOST": {
-      "description": "Docker socket for container management",
-      "default": "/var/run/docker.sock"
+    "PYTHONPATH": {
+      "description": "Python path for MCP module",
+      "default": "/app/sec-edgar-mcp"
     }
   }
 }

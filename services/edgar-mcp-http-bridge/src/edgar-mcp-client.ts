@@ -1,7 +1,7 @@
 /**
  * EDGAR MCP Client - Direct Integration
  * 
- * This client spawns and communicates with the public EDGAR MCP Docker image
+ * This client spawns and communicates with the SEC EDGAR MCP Python server
  * directly via stdin/stdout, providing a clean TypeScript API for all EDGAR tools.
  */
 
@@ -32,7 +32,6 @@ export type MCPResponse = z.infer<typeof MCPResponseSchema>;
 
 export interface EDGARMCPConfig {
   userAgent: string;
-  dockerImage?: string;
   timeout?: number;
 }
 
@@ -52,7 +51,6 @@ export class EDGARMCPClient {
 
   constructor(config: EDGARMCPConfig) {
     this.config = {
-      dockerImage: 'mcp/sec-edgar:latest',
       timeout: 30000,
       ...config
     };
@@ -67,15 +65,19 @@ export class EDGARMCPClient {
     }
 
     try {
-      // Spawn the official EDGAR MCP Docker container
-      this.process = spawn('docker', [
-        'run', 
-        '--rm',
-        '-i',  // Interactive for stdin
-        '--env', `SEC_EDGAR_USER_AGENT=${this.config.userAgent}`,
-        'mcp/sec-edgar'
+      // Spawn the Python MCP server directly
+      this.process = spawn('python', [
+        '-m', 'sec_edgar_mcp.server'
       ], {
-        stdio: ['pipe', 'pipe', 'pipe']
+        stdio: ['pipe', 'pipe', 'pipe'],
+        env: {
+          ...process.env,
+          SEC_EDGAR_USER_AGENT: this.config.userAgent,
+          PYTHONPATH: process.env.NODE_ENV === 'production' 
+            ? '/app/sec-edgar-mcp:' + (process.env.PYTHONPATH || '')
+            : '../../sec-edgar-mcp:' + (process.env.PYTHONPATH || '')
+        },
+        cwd: process.env.NODE_ENV === 'production' ? '/app' : process.cwd()
       });
 
       this.setupProcessHandlers();

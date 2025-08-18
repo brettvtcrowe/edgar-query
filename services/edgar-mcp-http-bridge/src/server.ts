@@ -269,9 +269,9 @@ async function startServer() {
       console.log(`📞 Call tools: POST http://localhost:${port}/tools/call`);
     });
 
-    // Try to initialize MCP client (may fail in Railway due to Docker limitations)
+    // Initialize MCP client with Python server
     try {
-      const userAgent = process.env.SEC_EDGAR_USER_AGENT || 'EdgarAnswerEngine/1.0 (contact@example.com)';
+      const userAgent = process.env.SEC_USER_AGENT || process.env.SEC_EDGAR_USER_AGENT || 'EdgarAnswerEngine/1.0 (contact@example.com)';
       console.log('📡 Attempting to connect to EDGAR MCP with User-Agent:', userAgent);
       
       mcpClient = new EDGARMCPClient({ userAgent });
@@ -284,8 +284,8 @@ async function startServer() {
       const tools = await mcpClient.listTools();
       console.log(`🛠️  Found ${tools.tools?.length || 0} tools available`);
     } catch (mcpError) {
-      console.warn('⚠️  MCP connection failed (expected in Railway environment):', mcpError instanceof Error ? mcpError.message : mcpError);
-      console.log('📡 HTTP Bridge server running without MCP integration - SEC API fallback will be used');
+      console.error('❌ MCP connection failed:', mcpError instanceof Error ? mcpError.message : mcpError);
+      console.log('📡 HTTP Bridge server running without MCP integration - fallback will be used');
       isConnected = false;
       mcpClient = null;
     }
