@@ -1,27 +1,38 @@
 # EDGAR Answer Engine
 
-**Intelligent natural language interface for SEC EDGAR filings with evidence-grounded citations**
+**Natural language interface for SEC EDGAR filings - Version 1.0 (SEC API Direct)**
 
-[![Status](https://img.shields.io/badge/Status-Production%20MVP%20Live-green)]()
+[![Version](https://img.shields.io/badge/Version-1.0%20SEC%20API-blue)]()
+[![Status](https://img.shields.io/badge/Status-Ready%20for%20Production-green)]()
 [![License](https://img.shields.io/badge/License-MIT-blue)]()
 [![Node](https://img.shields.io/badge/Node-20+-green)]()
 
 ## 🎯 Overview
 
-EDGAR Answer Engine is a sophisticated, evidence-first SEC filing analysis platform that provides institutional-grade answers to complex regulatory questions. Built with deterministic query execution, domain-specific adapters, and zero-hallucination guardrails, it delivers precise, verifiable insights from SEC EDGAR data without speculation or mirroring databases.
+EDGAR Answer Engine provides a clean, intuitive interface for querying SEC EDGAR filings using natural language. 
 
-### Key Features
+**Version 1.0** delivers direct SEC EDGAR API integration with intelligent query processing, providing immediate access to all public company filings without external dependencies.
 
-- **🎯 Evidence-First Answers**: Every claim tied to specific filings, sections, and character offsets
-- **🔬 Deterministic Execution**: LLM plans query → tools execute → LLM composes from evidence (no hallucination)
-- **🏛️ Domain Expertise**: ASC topic detection, accounting lexicon, corporate event correlation
-- **📊 Institutional-Grade Analysis**: 8-K restatements, segment changes, milestone method detection
-- **🔍 Hybrid Search Stack**: BM25 + embeddings + cross-encoder + section priors for maximum precision
-- **⚡ Temporal Correlation**: Links acquisitions to segment changes within 12-month windows
-- **📈 Multi-Form Mastery**: 10-K/10-Q items, 8-K event mapping, SEC comment letter parsing
-- **🔗 Hash-Verified Citations**: All evidence cross-checked against official SEC text with exact offsets
-- **⚙️ Zero-Speculation Guardrails**: No evidence = no claim; numeric facts validated against XBRL
-- **🚀 Cloudflare MCP Architecture**: Native protocol support with global edge performance
+**Version 2.0** (coming soon) will add the [SEC EDGAR MCP](https://github.com/stefanoamorelli/sec-edgar-mcp) integration for 21 specialized tools and advanced financial analysis.
+
+### Version 1.0 Features (Available Now)
+
+- **🔍 Natural Language Queries**: Ask questions in plain English, get structured data
+- **🏢 Company Analysis**: Ticker/CIK resolution, company info, recent filings
+- **📑 Filing Access**: Full text and HTML from any SEC filing
+- **🌐 Thematic Search**: Find information across multiple companies
+- **🔄 Real-time Data**: Direct from SEC EDGAR API, always current
+- **🎯 Precise Citations**: Every answer linked to source filings
+- **⚡ Fast Response**: 1-3s for company queries, 15-30s for thematic
+- **🔒 SEC Compliant**: Proper User-Agent, rate limiting, respectful crawling
+
+### Version 2.0 Features (Coming Soon)
+
+- **📊 21 MCP Tools**: Advanced SEC EDGAR MCP capabilities
+- **📈 Financial Analysis**: XBRL processing, key metrics, segment analysis
+- **📝 Section Extraction**: Automatic Risk Factors, MD&A parsing
+- **💹 Insider Trading**: Form 4/5 analysis and sentiment tracking
+- **🎯 8-K Intelligence**: Event categorization and material change detection
 
 ### Example Queries (All Working Now! ✅)
 
@@ -68,45 +79,53 @@ EDGAR Answer Engine is a sophisticated, evidence-first SEC filing analysis platf
 
 > **Full Capabilities**: See [docs/QUERY_CAPABILITIES.md](./docs/QUERY_CAPABILITIES.md) for comprehensive examples and supported query patterns including regulatory compliance analysis, accounting policy tracking, and SEC comment letter searches.
 
-## 🏗️ Evidence-First Architecture
+## 🏗️ System Architecture
 
-**Production Architecture (Cloudflare Workers MCP)**
+### Version 1.0 Architecture (Current)
 
 ```
-Browser → Chat API → Query Understanding → Deterministic Execution → Evidence Composition
-                           ↓                        ↓                        ↓
-              ┌─────────────────────┐    ┌─────────────────────┐    ┌─────────────────────┐
-              │ Intent Classification│    │ Discovery & Fetch   │    │ Citation Verification│
-              │ Entity Resolution   │    │ Domain Sectionizers │    │ Evidence Assembly   │
-              │ Execution Planning  │    │ Hybrid Search       │    │ Guardrail Checks   │
-              └─────────────────────┘    └─────────────────────┘    └─────────────────────┘
-                           ↓                        ↓                        ↓
-              ┌─────────────────────────────────────────────────────────────────────────┐
-              │                   Cloudflare Workers MCP Server                         │
-              │  ┌─────────────────┬─────────────────┬─────────────────┬─────────────┐ │
-              │  │ Query Tools     │ Discovery Tools │ Domain Adapters │ Analysis    │ │
-              │  │ • classify_intent│ • discover_filings│ • sectionize_10k│ • link_events│ │
-              │  │ • resolve_entities│ • bulk_fetch    │ • parse_8k_items│ • detect_asc │ │
-              │  │ • build_plan    │ • hybrid_search │ • comment_letters│ • correlate  │ │
-              │  └─────────────────┴─────────────────┴─────────────────┴─────────────┘ │
-              └─────────────────────────────────────────────────────────────────────────┘
-                                                   ↓
-                        ┌─────────────────────────────────────────────────┐
-                        │ Evidence Store (Durable Objects + SQL)         │
-                        │ • Company events with temporal links           │
-                        │ • Section offsets with topic indexing         │
-                        │ • ASC code detection and correlation          │
-                        │ • Hash-verified citation cache                │
-                        └─────────────────────────────────────────────────┘
+User Browser
+     ↓
+Vercel (Next.js App)
+     ↓
+Query Orchestrator
+     ↓
+SEC EDGAR API (Direct)
+     
+Supporting Services:
+- PostgreSQL (metadata & caching)
+- Redis (rate limiting)
+- Vercel Blob (filing cache)
 ```
 
-**Core Principles:**
-- **Evidence-First**: Every claim backed by specific filing/section/offset with hash verification
-- **Deterministic Execution**: LLM plans → tools execute → LLM composes (no hallucination path)
-- **Domain Expertise**: Form-specific parsing, accounting lexicon, event correlation
-- **Zero-Speculation**: No evidence = no claim; numeric facts cross-checked with XBRL
-- **Temporal Intelligence**: 12-month correlation windows for corporate events
-- **Hybrid Precision**: BM25 + embeddings + cross-encoder + section priors for maximum accuracy
+### Version 2.0 Architecture (Future)
+
+Version 2 will add MCP integration via Google Cloud Run. See [VERSION_PLAN.md](./docs/VERSION_PLAN.md) for detailed comparison.
+
+**Core Components:**
+
+1. **Next.js Frontend** (Vercel)
+   - Chat interface for natural language queries
+   - Streaming responses with progress indicators
+   - Citation rendering with SEC links
+
+2. **Query Orchestrator**
+   - Intelligent query classification (4 patterns)
+   - Entity extraction and normalization
+   - Tool selection and routing
+   - Response formatting
+
+3. **SEC EDGAR Client**
+   - Direct SEC API integration
+   - Company/ticker resolution
+   - Filing retrieval and search
+   - Automatic rate limiting
+
+**Key Design Decisions:**
+- **Direct SEC Access**: Real-time data, no mirroring or stale databases
+- **Intelligent Fallback**: Graceful degradation when services unavailable
+- **Proper Caching**: Smart caching at multiple layers for performance
+- **Future Ready**: Architecture supports MCP addition in Version 2
 
 ---
 
@@ -164,9 +183,9 @@ Browser → Chat API → Query Understanding → Deterministic Execution → Evi
 ### Prerequisites
 - Node.js 20+
 - pnpm 8+
-- PostgreSQL with pgvector
-- Redis (Upstash)
-- LLM API key (OpenAI/Anthropic)
+- PostgreSQL (any provider)
+- Redis (Upstash recommended)
+- OpenAI API key (for GPT-4)
 
 ### Installation
 
@@ -201,18 +220,18 @@ curl http://localhost:3000/api/health
 
 ---
 
-## 🚀 **LIVE NOW: Try the Production System**
+## 🚀 **Version 1.0: Ready for Production**
 
-### 🎉 **Thematic Search Available to Users**
-**Try it now**: https://edgar-query-nu.vercel.app/
+### Deploy Now
+**Live URL**: https://edgar-query-nu.vercel.app/
 
-**What you can do:**
+**Version 1.0 Capabilities:**
 - ✅ Ask about specific companies: *"Apple's latest 10-K"*
 - ✅ Cross-company thematic analysis: *"All companies mentioning AI"*  
 - ✅ Sector comparisons: *"How do banks describe credit risk?"*
-- ✅ Advanced regulatory queries: *"Find ASC 606 restatements"*
+- ✅ Filing searches: *"Tesla's 8-K filings from 2024"*
 
-See [docs/PROJECT_STATUS.md](./docs/PROJECT_STATUS.md) for detailed capabilities and [docs/QUERY_CAPABILITIES.md](./docs/QUERY_CAPABILITIES.md) for comprehensive query examples.
+See [docs/VERSION_PLAN.md](./docs/VERSION_PLAN.md) for Version 1 vs Version 2 comparison.
 
 ## 🏃‍♂️ Development Workflow
 
@@ -238,57 +257,59 @@ Each phase has specific validation gates in [docs/VALIDATION_CHECKLIST.md](./doc
 
 ## 🛠️ Technology Stack
 
-### Core Framework
-- **Next.js 14+** (App Router) - React framework with serverless functions
-- **TypeScript** - Type safety and developer experience
-- **Tailwind CSS** - Utility-first styling framework
-- **Vercel** - Hosting and deployment platform
+### Frontend & Hosting
+- **Next.js 14+** (App Router) - React framework with API routes
+- **TypeScript** - Type safety across the stack
+- **Tailwind CSS** - Utility-first styling
+- **Vercel** - Frontend hosting and serverless functions
 
-### Data & AI
-- **PostgreSQL** - Database for metadata and caching
-- **Prisma** - Database ORM and migrations
-- **OpenAI/Anthropic APIs** - LLM for query processing
-- **MCP (Model Context Protocol)** - Tool orchestration layer
+### Backend Services
+- **Next.js API Routes** - Serverless backend functions
+- **SEC EDGAR API** - Direct integration for real-time data
+- **Query Orchestrator** - Intelligent request routing
+- **Future: MCP** - Version 2 will add 21 specialized tools
 
-### Infrastructure
-- **Upstash Redis** - Rate limiting and caching
-- **Vercel Blob** - File storage for cached filings
-- **Vercel Analytics** - Performance monitoring
+### Data & Storage
+- **PostgreSQL** - Metadata and query caching
+- **Prisma** - Database ORM
+- **Upstash Redis** - Rate limiting
+- **Vercel Blob** - Filing content cache
 
-### Search & RAG
-- **BM25** - Keyword search algorithm
-- **Vector Embeddings** - Semantic search
-- **Hybrid Ranking** - Combined keyword + semantic scoring
+### AI & Processing
+- **OpenAI GPT-4** - Natural language understanding and response generation
+- **Custom NLP** - Query classification and entity extraction
+- **Future: MCP Protocol** - Version 2 standardized tool interface
 
 ---
 
 ## 📊 Project Status
 
-### ✅ Completed
-- [x] Complete documentation suite
-- [x] Architecture design and technical specifications
-- [x] UI/UX design system and component specifications
-- [x] Development environment setup guide
+### ✅ Version 1.0 Complete
+- [x] **SEC EDGAR API Integration** - Direct access to all filings
+- [x] **Query Orchestrator** - Intelligent routing and classification
+- [x] **Natural Language Interface** - GPT-4 powered responses
+- [x] **Company Analysis** - Ticker/CIK resolution, company info
+- [x] **Filing Retrieval** - Access any SEC filing by type
+- [x] **Thematic Search** - Cross-company analysis
+- [x] **Full Citations** - Direct SEC.gov links
+- [x] **Production Ready** - Deployed on Vercel
 
-### ✅ **LIVE NOW: Full Production Capabilities** 🚀
-- [x] **Natural language query processing** with 95%+ accuracy
-- [x] **Company-specific SEC data retrieval** (Apple, Microsoft, Tesla, etc.) in 1-3s
-- [x] **Thematic cross-document search** ("All companies mentioning AI") in 15-30s  
-- [x] **Hybrid analysis queries** (compare companies, sector analysis) in 10-20s
-- [x] **Intelligent entity extraction** (companies, tickers, forms, dates, topics)
-- [x] **Progressive streaming** with real-time progress updates
-- [x] **Full citations** with direct SEC.gov links and snippets
-- [x] **Automatic SEC API compliance** with rate limiting and User-Agent
-- [x] **100% reliability** via automatic fallback when services unavailable
-- [x] **Production deployment** on Vercel + Railway with monitoring
-- [x] **Chat API integration** - users can access all features through web interface
+### 🚀 Version 1.0 Performance
+- **Company queries**: 1-3s response time
+- **Filing retrieval**: 2-5s response time  
+- **Thematic search**: 15-30s for cross-company
+- **Accuracy**: 95%+ query classification
+- **Reliability**: 100% with fallback mechanisms
+- **SEC Compliance**: Full rate limiting and User-Agent
 
-### 🚧 Future Enhancements (Optional)
-- **Phase 2.2**: Advanced sectionizers for precise content extraction  
-- **Phase 3**: Enhanced caching and performance optimizations
-- **Phase 4**: Improved streaming UI with interactive citations
-- **Phase 5**: Advanced analytics dashboards and visualizations
-- **Phase 6**: Multi-language support and international filings
+### 🔮 Version 2.0 Roadmap
+- [ ] Deploy MCP to Google Cloud Run
+- [ ] Add 21 specialized analysis tools
+- [ ] Implement section extraction
+- [ ] Add insider trading analysis
+- [ ] Enable financial comparisons
+
+See [docs/VERSION_PLAN.md](./docs/VERSION_PLAN.md) for detailed version comparison.
 
 ---
 
@@ -319,23 +340,26 @@ pnpm test:coverage
 
 ## 🚀 Deployment
 
-### Production Environment
-- **Vercel** - Primary hosting platform
-- **Neon/Supabase** - Managed PostgreSQL
-- **Upstash** - Global Redis
-- **Custom Domain** - edgar.yourdomain.com
-
-### Deployment Process
+### Version 1.0 Deployment (Simple)
 ```bash
+# Set environment variables in Vercel
+SEC_USER_AGENT="YourApp/1.0 (email@example.com)"
+DATABASE_URL="postgresql://..."
+REDIS_URL="redis://..."
+OPENAI_API_KEY="sk-..."
+
 # Deploy to Vercel
 vercel --prod
 
-# Run database migrations
-pnpm db:migrate
-
 # Verify deployment
-curl https://edgar.yourdomain.com/api/health
+curl https://your-app.vercel.app/api/health
 ```
+
+### Production Environment
+- **Vercel** - Serverless hosting
+- **PostgreSQL** - Any provider (Neon, Supabase, etc.)
+- **Upstash Redis** - Rate limiting
+- **OpenAI** - GPT-4 for responses
 
 See [docs/SETUP_GUIDE.md](./docs/SETUP_GUIDE.md) for detailed deployment instructions.
 
@@ -429,18 +453,21 @@ MIT License - see LICENSE file for details.
 
 ---
 
-## 🎯 Agent Quick Reference
+## 🎯 Quick Reference
 
-**For AI agents working on this project:**
+### Version Information
+- **Current**: Version 1.0 (SEC API Direct)
+- **Status**: Ready for Production
+- **Next**: Version 2.0 (MCP Enhanced)
 
-1. **Starting new work?** → Read [docs/PROJECT_ROADMAP.md](./docs/PROJECT_ROADMAP.md) current phase
-2. **Need technical details?** → Check [docs/ARCHITECTURE_REFERENCE.md](./docs/ARCHITECTURE_REFERENCE.md) 
-3. **Writing code?** → Use [docs/DEVELOPMENT_GUIDE.md](./docs/DEVELOPMENT_GUIDE.md) examples
-4. **Building UI?** → Follow [docs/UX_DESIGN_SPECIFICATION.md](./docs/UX_DESIGN_SPECIFICATION.md)
-5. **Testing features?** → Use [docs/VALIDATION_CHECKLIST.md](./docs/VALIDATION_CHECKLIST.md)
-6. **Setting up environment?** → Follow [docs/SETUP_GUIDE.md](./docs/SETUP_GUIDE.md)
+### Key Documentation
+1. **Version Comparison** → [docs/VERSION_PLAN.md](./docs/VERSION_PLAN.md)
+2. **Project Roadmap** → [docs/PROJECT_ROADMAP.md](./docs/PROJECT_ROADMAP.md)
+3. **Architecture** → [docs/ARCHITECTURE_REFERENCE.md](./docs/ARCHITECTURE_REFERENCE.md)
+4. **Setup Guide** → [docs/SETUP_GUIDE.md](./docs/SETUP_GUIDE.md)
+5. **Query Examples** → [docs/QUERY_CAPABILITIES.md](./docs/QUERY_CAPABILITIES.md)
 
-**Current Focus**: Complete Phase 1 Foundation tasks as outlined in the roadmap.
+**Current Focus**: Deploy Version 1.0 to production with SEC API integration.
 
 ---
 

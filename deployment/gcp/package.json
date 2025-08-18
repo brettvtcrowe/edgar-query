@@ -1,0 +1,19 @@
+{
+  "name": "edgar-mcp-http-proxy",
+  "version": "1.0.0",
+  "description": "HTTP to STDIO proxy for SEC EDGAR MCP",
+  "main": "simple-proxy.js",
+  "scripts": {
+    "start": "node simple-proxy.js",
+    "start-full": "node mcp-http-proxy.js",
+    "test": "curl http://localhost:8080/health"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "axios": "^1.6.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
